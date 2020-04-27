@@ -1,11 +1,13 @@
+"""
+`sentence_index` and `target_index` are using to set polarity to sentence target
+"""
 import copy
-from typing import List, Tuple
+from typing import List, Dict
 from collections import namedtuple
 
 import torch as th
 import numpy as np
 import networkx as nx
-from gensim.models import KeyedVectors
 
 from src import UNKNOWN_WORD, PAD_WORD
 from src.review.parsed_sentence import ParsedSentence
@@ -16,9 +18,9 @@ Batch = namedtuple(
 
 
 class DataLoader:
-    def __init__(self, word2vec: KeyedVectors, sentences: List[ParsedSentence],
-                 batch_size: int, device: th.device):
-        self.word2vec = word2vec
+    def __init__(self, vocabulary: Dict, sentences: List[ParsedSentence], batch_size: int,
+                 device: th.device):
+        self.vocabulary = vocabulary
         self.batch_size = batch_size
         self.device = device
 
@@ -44,10 +46,10 @@ class DataLoader:
         embed_ids = []
         for word in sentence.get_sentence_order():
             if word in sentence.id2lemma:
-                if sentence.id2lemma[word] in self.word2vec.vocab:
-                    embed_ids.append(self.word2vec.vocab[sentence.id2lemma[word]].index)
+                if sentence.id2lemma[word] in self.vocabulary:
+                    embed_ids.append(self.vocabulary[sentence.id2lemma[word]])
                 else:
-                    embed_ids.append(self.word2vec.vocab[UNKNOWN_WORD].index)
+                    embed_ids.append(self.vocabulary[UNKNOWN_WORD])
 
         sentence_len = len(sentence.graph.nodes)
 
@@ -89,15 +91,14 @@ class DataLoader:
 
         # sort all fields by lens for easy RNN operations
         max_len = max([x.sentence_len for x in batch])
-        batch = sort_all(batch=batch)  # todo: pass original order
+        batch = sort_all(batch=batch)
 
         sentence_index = th.LongTensor([x.sentence_index for x in batch])
         target_index = th.LongTensor([x.target_index for x in batch])
         sentence_lens = th.LongTensor([x.sentence_len for x in batch])
         polarity = th.LongTensor([x.polarity for x in batch])
 
-        embed_ids = th.LongTensor(batch_size,
-                                  max_len).fill_(self.word2vec.vocab[PAD_WORD].index)
+        embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[PAD_WORD])
         mask = th.FloatTensor(batch_size, max_len).fill_(0)
         adj = []
         for i, b in enumerate(batch):
@@ -133,7 +134,10 @@ class DataLoader:
 
 def sort_all(batch: List[Batch]) -> List[Batch]:
     """
-    Sort all fields by descending order of lens, and return the original indices.
+    Sort all fields by descending order of lens.
+
+    Not pass original index because there is already in batch index of
+    sentence and target.
     """
     _, sorted_batch = list(
         zip(*sorted(enumerate(batch), key=lambda x: x[1].sentence_len, reverse=True)))

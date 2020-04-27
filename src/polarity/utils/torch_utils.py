@@ -14,11 +14,3 @@ def get_optimizer(name, parameters, lr, l2=0):
         return torch.optim.Adadelta(parameters, lr=lr, weight_decay=l2)
     else:
         raise Exception("Unsupported optimizer: {}".format(name))
-
-
-def load_config(filename):
-    try:
-        dump = torch.load(filename)
-    except BaseException:
-        print("[ Fail: model loading failed. ]")
-    return dump['config']

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union, Dict
 import logging
 import time
 import copy
@@ -9,32 +9,49 @@ import numpy as np
 from sklearn import metrics
 from gensim.models import KeyedVectors
 
-from .draw import draw_curve
 from .loader import DataLoader
 from .gcn import GCNClassifier
 from .utils import torch_utils
 from .loader import Batch
-
+from src import SCORE_DECIMAL_LEN
 from src.review.parsed_sentence import ParsedSentence
-
-DECIMAL_LEN = 6
+from src import polarity_classifier_dump_path
 
 
 class PolarityClassifier:
-    def __init__(self, word2vec: KeyedVectors, batch_size=32):
-        self.word2vec = word2vec
+    """Polarity classifier
+
+    Attributes
+    ----------
+    word2vec : Union[KeyedVectors, Dict]
+        KeyedVectors to set pretrained embeddings.
+        Otherwise dict - to set vocabulary and shape of embeddings.
+    """
+    def __init__(self,
+                 word2vec: Union[KeyedVectors, Dict],
+                 batch_size=32,
+                 emb_matrix_shape=None):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
+        if isinstance(word2vec, KeyedVectors):
+            self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
+            emb_matrix = th.FloatTensor(word2vec.vectors)
+        elif isinstance(word2vec, dict):
+            self.vocabulary = word2vec
+            emb_matrix = None
+        else:
+            raise ValueError
+
         while True:
             try:
-                self.model = GCNClassifier(emb_matrix=th.FloatTensor(self.word2vec.vectors),
-                                           device=self.device)
+                self.model = GCNClassifier(emb_matrix=emb_matrix,
+                                           device=self.device,
+                                           emb_matrix_shape=emb_matrix_shape)
             except RuntimeError:
                 time.sleep(1)
             else:
                 break
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.model.to(self.device)
 
     def batch_metrics(self, batch: Batch):
@@ -55,15 +72,16 @@ class PolarityClassifier:
             optimizer_name='adamax',
             num_epoch=5):
 
-        optimizer = torch_utils.get_optimizer(optimizer_name, self.parameters, lr)
+        parameters = [p for p in self.model.parameters() if p.requires_grad]
+        optimizer = torch_utils.get_optimizer(optimizer_name, parameters, lr)
 
         train_batches = DataLoader(sentences=train_sentences,
                                    batch_size=self.batch_size,
-                                   word2vec=self.word2vec,
+                                   vocabulary=self.vocabulary,
                                    device=self.device)
         val_batches = DataLoader(sentences=val_sentences,
                                  batch_size=self.batch_size,
-                                 word2vec=self.word2vec,
+                                 vocabulary=self.vocabulary,
                                  device=self.device)
 
         train_acc_history, train_loss_history = [], []
@@ -102,51 +120,50 @@ class PolarityClassifier:
             val_loss = val_loss / val_len
             val_acc = val_acc / val_len
             logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-            logging.info(f'TRAIN ' + f'loss: {train_loss:.{DECIMAL_LEN}f}| ' +
-                         f'acc: {train_acc:.{DECIMAL_LEN}f}')
-            logging.info(f'TEST  ' + f'loss: {(val_loss/val_len):.{DECIMAL_LEN}f}| ' +
-                         f'acc: {val_acc:.{DECIMAL_LEN}f}| ' +
-                         f'f1_score: {f1_score:.{DECIMAL_LEN}f}')
+            logging.info(f'Train ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
+                         f'acc: {train_acc:.{SCORE_DECIMAL_LEN}f}')
+            logging.info(f'Test  ' + f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
+                         f'acc: {val_acc:.{SCORE_DECIMAL_LEN}f}| ' +
+                         f'f1_score: {f1_score:.{SCORE_DECIMAL_LEN}f}')
 
             train_acc_history.append(train_acc)
             train_loss_history.append(train_loss)
             val_loss_history.append(val_loss)
             val_acc_history.append(val_acc)
             f1_score_history.append(f1_score)
-
-        bt_train_acc = max(train_acc_history)
-        bt_train_loss = min(train_loss_history)
-        bt_test_acc = max(val_acc_history)
-        bt_f1_score = f1_score_history[val_acc_history.index(bt_test_acc)]
-        bt_test_loss = min(val_loss_history)
-        # logging.info(
-        #     'best train_acc: {},', 'best train_loss: {},', 'best test_acc/f1_score: {}/{}',
-        #     'best test_loss: {}'.format(bt_train_acc, bt_train_loss, bt_test_acc, bt_f1_score,
-        #                                 bt_test_loss))
-        # draw_curve(train_log=train_acc_history,
-        #            test_log=val_acc_history[1:],
-        #            curve_type="acc",
-        #            epoch=num_epoch)
-        # draw_curve(train_log=train_loss_history,
-        #            test_log=val_loss_history,
-        #            curve_type="loss",
-        #            epoch=num_epoch)
+        self.save_model()
 
     def predict(self, sentences: List[ParsedSentence]):
+        self.model.eval()
         sentences = copy.deepcopy(sentences)
         batches = DataLoader(sentences=sentences,
                              batch_size=self.batch_size,
-                             word2vec=self.word2vec,
+                             vocabulary=self.vocabulary,
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
                                              adj=batch.adj,
                                              mask=batch.mask,
                                              sentence_len=batch.sentence_len)
-            # pred_labels = th.max(logits,1)[1].view(batch.polarity.size()).data.cpu().numpy().tolist()
             pred_labels = np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):
                 sentence_index = batch.sentence_index[item_index]
                 target_index = batch.target_index[item_index]
                 sentences[sentence_index].targets[target_index].set_polarity(item)
         return sentences
+
+    def save_model(self):
+        th.save({
+            'vocabulary': self.vocabulary,
+            'model': self.model.state_dict()
+        }, polarity_classifier_dump_path)
+
+    @staticmethod
+    def load_model():
+        checkpoint = th.load(polarity_classifier_dump_path)
+        model = checkpoint['model']
+        classifier = PolarityClassifier(
+            word2vec=checkpoint['vocabulary'],
+            emb_matrix_shape=[x for x in model['gcn.embed.weight'].shape])
+        classifier.model.load_state_dict(model)
+        return classifier

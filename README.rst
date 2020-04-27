@@ -12,7 +12,7 @@ Setup
 
 .. code-block:: bash
 
-    poetry install
+    poetry install --no-dev
 
 
 **Download embeddings**

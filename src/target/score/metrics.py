@@ -8,9 +8,9 @@ from typing import List
 from collections import namedtuple
 import logging
 
+from src import SCORE_DECIMAL_LEN
 from src.review.parsed_sentence import ParsedSentence
 
-TARGET_ACC_DECIMAL_LEN = 5
 Score = namedtuple('Score', ['precision', 'recall', 'f1'])
 
 
@@ -126,7 +126,7 @@ def get_sb3(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence
 # ------------------------------------ PRINT ----------------------------------
 
 
-def _print_f1_score(precision, recall, f1, decimal_len=TARGET_ACC_DECIMAL_LEN):
+def _print_f1_score(precision, recall, f1, decimal_len=SCORE_DECIMAL_LEN):
     logging.info(f'Precision: {precision:.{decimal_len}f}')
     logging.info(f'Recall: {recall:.{decimal_len}f}')
     logging.info(f'F1: {f1:.{decimal_len}f}')
@@ -150,4 +150,4 @@ def print_sb2(sentences: List[ParsedSentence], sentences_pred: List[ParsedSenten
 
 def print_sb3(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]):
     accuracy = get_sb3(sentences=sentences, sentences_pred=sentences_pred)
-    print(f'Accuracy: {accuracy:.{TARGET_ACC_DECIMAL_LEN}f}')
+    print(f'Accuracy: {accuracy:.{SCORE_DECIMAL_LEN}f}')

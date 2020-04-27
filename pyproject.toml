@@ -15,6 +15,7 @@ pandas = "^1.0.3"
 tqdm = "^4.45.0"
 scipy = "^1.4.1"
 gensim = "^3.8.2"
+termcolor = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

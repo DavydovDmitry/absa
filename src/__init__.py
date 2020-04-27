@@ -17,8 +17,10 @@ Labeling
 
 import os
 
-# ------------------------------- Embeddings ----------------------------------
+# ------------------------------- Constants -----------------------------------
+SCORE_DECIMAL_LEN = 5
 
+# ------------------------------- Embeddings ----------------------------------
 UNKNOWN_WORD = '<unk>'
 PAD_WORD = '<pad>'
 
@@ -51,3 +53,5 @@ labeled_reviews_dump_path = os.path.join(dumps_path, 'labeled_reviews')
 sb12_classifier_path = os.path.join(dumps_path, 'sb12_classifier')
 sb12_train_data_path = os.path.join(dumps_path, 'sb12_train_data')
 sb12_test_data_path = os.path.join(dumps_path, 'sb12_test_data')
+
+polarity_classifier_dump_path = os.path.join(dumps_path, 'polarity_classifier.pt')
