@@ -14,11 +14,6 @@ Setup
 
     poetry install
 
-**Or pip**
-
-.. code-block:: bash
-
-    pip install -r requirements.txt
 
 **Download embeddings**
 
