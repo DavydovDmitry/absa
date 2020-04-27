@@ -16,6 +16,7 @@ from .loader import Batch
 from src import SCORE_DECIMAL_LEN
 from src.review.parsed_sentence import ParsedSentence
 from src import polarity_classifier_dump_path
+from .score.display import display_score
 
 
 class PolarityClassifier:
@@ -131,6 +132,9 @@ class PolarityClassifier:
             val_loss_history.append(val_loss)
             val_acc_history.append(val_acc)
             f1_score_history.append(f1_score)
+        display_score(parameter_values=[x for x in range(num_epoch)],
+                      train_values=train_acc_history,
+                      val_values=val_acc_history)
         self.save_model()
 
     def predict(self, sentences: List[ParsedSentence]):
