@@ -1,0 +1,53 @@
+"""Pipeline
+
+Upload reviews
+     |
+     |  List[Reviews]
+     V
+Spell check
+     |
+     |  List[Reviews]
+     V
+Dependency parsing
+     |
+     |  List[List[ParsedSentence]]
+     V
+Labeling
+"""
+
+import os
+
+# ------------------------------- Embeddings ----------------------------------
+
+UNKNOWN_WORD = '<unk>'
+PAD_WORD = '<pad>'
+
+# ------------------------------- Pathways ------------------------------------
+module_path = os.path.dirname(os.path.abspath(__file__))
+competition_path = os.path.join(module_path, '../datasets/SemEval2016')
+
+TEST_APPENDIX = '.test'  # suffix for test dumps
+
+train_reviews_path = os.path.join(competition_path, 'dataset', 'train.xml')
+test_reviews_path = os.path.join(competition_path, 'dataset', 'test.xml')
+
+test_a_reviews_path = os.path.join(competition_path, 'dataset', 'test_a.xml')
+test_b_reviews_path = os.path.join(competition_path, 'dataset', 'test_b.xml')
+
+rus_vectors_path = os.path.join(os.path.dirname(module_path), 'RusVectores')
+word2vec_model_path = os.path.join(rus_vectors_path, 'tayga_upos_skipgram_300_2_2019',
+                                   'model.bin')
+
+images_path = os.path.join(module_path, '../images')
+log_path = os.path.join(module_path, '../logs')
+
+# --------------------------------- Dumps -------------------------------------
+dumps_path = os.path.join(competition_path, 'dumps')
+
+checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')
+parsed_reviews_dump_path = os.path.join(dumps_path, 'dep_parsed_sentence')
+labeled_reviews_dump_path = os.path.join(dumps_path, 'labeled_reviews')
+
+sb12_classifier_path = os.path.join(dumps_path, 'sb12_classifier')
+sb12_train_data_path = os.path.join(dumps_path, 'sb12_train_data')
+sb12_test_data_path = os.path.join(dumps_path, 'sb12_test_data')

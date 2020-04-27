@@ -1,0 +1,20 @@
+8.6
+
+polarity -> target
+#######
+nsubj - noun
+obl - noun
+punct - noun
+conj - noun
+
+obj
+nmod
+
+target -> target
+#######
+conj - пара,
+nmod
+amod
+case
+appos
+advcl

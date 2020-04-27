@@ -1,0 +1,16 @@
+eval1.py – скрипт оценки задач А и Б
+запуск: python eval1.py -g <gold_file_name> -t <test_file_name> -a <task> -w <eval_type>
+Например, оценка задачи А по слабым требованиям (предметная область отзывов о ресторанах): python eval1.py -g SentiRuEval_rest_markup_test.xml -t SentiRuEval_rest_test_final.xml -a a -w weak
+Или, например, оценка задачи Б по сильным требованиям (предметная область отзывов об автомобилях): python eval1.py -g SentiRuEval_car_markup_test.xml -t SentiRuEval_car_test_final.xml -a b -w strong
+
+eval2.py – скрипт оценки задачи В
+запуск: python eval2.py -g <gold_file_name> -t <test_file_name>
+Например, оценка задачи В (предметная область отзывов о ресторанах): python eval2.py -g SentiRuEval_rest_markup_test.xml -t SentiRuEval_rest_test_final.xml
+
+eval3.py – скрипт оценки задачи Г
+запуск: python eval3.py -g <gold_file_name> -t <test_file_name>
+Например, оценка задачи Г (предметная область отзывов об автомобилях): python eval3.py -g SentiRuEval_car_markup_test.xml -t SentiRuEval_car_test_final.xml
+
+eval4.py – скрипт оценки задачи Д
+запуск: python eval4.py -g <gold_file_name> -t <test_file_name>
+Например, оценка задачи Д (предметная область отзывов о ресторанах): python eval4.py -g SentiRuEval_rest_markup_test.xml -t SentiRuEval_rest_test_final.xml
