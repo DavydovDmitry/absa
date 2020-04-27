@@ -1,0 +1,6 @@
+# Because of some functions have to much nested cycles, it's became hard
+# to read them, if use 80 columns.
+
+[style]
+based_on_style = pep8
+column_limit = 95
