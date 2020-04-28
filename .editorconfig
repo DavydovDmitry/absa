@@ -1,4 +1,5 @@
-# Customize your editor. If your editor have not native support look for plugin.
+# Customize your editor. If your editor doesn't have native support look
+# for a plugin.
 
 # No need to look for another .editorconfig files
 root = true
