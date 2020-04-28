@@ -72,7 +72,7 @@ class PolarityClassifier:
             optimizer_class=th.optim.Adamax,
             lr=0.005,
             weight_decay=0,
-            num_epoch=100):
+            num_epoch=5):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, lr=lr, weight_decay=weight_decay)
 
@@ -90,6 +90,7 @@ class PolarityClassifier:
 
         for epoch in range(num_epoch):
             # Train
+            start_time = time.process_time()
             train_len = len(train_batches)
             self.model.train()
             train_loss, train_acc = 0., 0.
@@ -120,9 +121,11 @@ class PolarityClassifier:
             val_loss = val_loss / val_len
             val_acc = val_acc / val_len
             logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-            logging.info(f'Train ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
+            logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
+            logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
                          f'acc: {train_acc:.{SCORE_DECIMAL_LEN}f}')
-            logging.info(f'Test  ' + f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
+            logging.info(f'Validation ' +
+                         f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
                          f'acc: {val_acc:.{SCORE_DECIMAL_LEN}f}| ' +
                          f'f1_score: {f1_score:.{SCORE_DECIMAL_LEN}f}')
 
