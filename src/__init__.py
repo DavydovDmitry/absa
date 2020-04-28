@@ -1,3 +1,4 @@
+"""Specify constants and pathways here"""
 import os
 
 # ------------------------------- Constants -----------------------------------

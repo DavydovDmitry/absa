@@ -1,6 +1,3 @@
-"""
-`sentence_index` and `target_index` are using to set polarity to sentence target
-"""
 import copy
 from typing import List, Dict
 from collections import namedtuple
@@ -18,6 +15,15 @@ Batch = namedtuple(
 
 
 class DataLoader:
+    """DataLoader for polarity classifier.
+
+    Prepare batches for network.
+
+    Attributes
+    ----------
+    vocabulary : dict
+        dictionary where key is wordlemma_POS value - index in embedding matrix
+    """
     def __init__(self,
                  vocabulary: Dict[str, int],
                  sentences: List[ParsedSentence],
@@ -134,16 +140,16 @@ class DataLoader:
             yield self.__getitem__(i)
 
     def __len__(self) -> int:
-        """Return number of butches"""
+        """Return number of batches"""
         return len(self.data)
 
 
 def sort_by_sentence_len(batch: List[Batch]) -> List[Batch]:
     """
-    Sort all fields by descending order of lens.
+    Sort sentences by descending order of it's len.
 
-    Not pass original index because there is already in batch index of
-    sentence and target.
+    Not return original index because there is already sentence and target
+    indexes in batch.
     """
     _, sorted_batch = list(
         zip(*sorted(enumerate(batch), key=lambda x: x[1].sentence_len, reverse=True)))

@@ -3,7 +3,6 @@ from typing import List
 from functools import reduce
 import datetime
 import os
-import copy
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -24,6 +23,11 @@ SEED = 42
 
 
 def configure_logging():
+    """Logging configuration
+
+    Log formatting.
+    Pass logs to terminal and to file.
+    """
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
 

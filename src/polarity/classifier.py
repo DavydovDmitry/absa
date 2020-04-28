@@ -2,6 +2,7 @@ from typing import List, Dict
 import logging
 import time
 import copy
+from functools import reduce
 
 import torch as th
 import torch.nn.functional as F
@@ -38,21 +39,16 @@ class PolarityClassifier:
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
+        # prepare vocabulary and embeddings
         if isinstance(word2vec, KeyedVectors):
             self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
             emb_matrix = th.FloatTensor(word2vec.vectors)
         else:
             self.vocabulary = vocabulary
 
-        while True:
-            try:
-                self.model = GCNClassifier(emb_matrix=emb_matrix,
-                                           device=self.device,
-                                           num_class=len(Polarity))
-            except RuntimeError:
-                time.sleep(1)
-            else:
-                break
+        self.model = GCNClassifier(emb_matrix=emb_matrix,
+                                   device=self.device,
+                                   num_class=len(Polarity))
         self.model.to(self.device)
 
     def batch_metrics(self, batch: Batch):
@@ -74,6 +70,9 @@ class PolarityClassifier:
             weight_decay=0,
             num_epoch=5):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
+        logging.info(
+            f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
+        )
         optimizer = optimizer_class(parameters, lr=lr, weight_decay=weight_decay)
 
         train_batches = DataLoader(sentences=train_sentences,
