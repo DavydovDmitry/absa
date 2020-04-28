@@ -7,17 +7,10 @@ from src.review.target import Polarity
 
 
 class GCNClassifier(nn.Module):
-    def __init__(self,
-                 emb_matrix: th.Tensor,
-                 device: th.device,
-                 emb_matrix_shape,
-                 num_class=len(Polarity),
-                 mem_dim=50):
+    def __init__(self, emb_matrix: th.Tensor, device: th.device, num_class, mem_dim=50):
         super().__init__()
         self.device = device
-        self.gcn = GCN(emb_matrix=emb_matrix,
-                       device=self.device,
-                       emb_matrix_shape=emb_matrix_shape)
+        self.gcn = GCN(emb_matrix=emb_matrix, device=self.device)
         self.classifier = nn.Linear(mem_dim, num_class)
 
     def forward(self, embed_ids: th.Tensor, adj: th.Tensor, mask: th.Tensor,
@@ -38,7 +31,6 @@ class GCN(nn.Module):
     def __init__(
         self,
         emb_matrix: th.Tensor,
-        emb_matrix_shape,
         device: th.device,
         rnn_hidden=50,
         rnn_layers=1,
@@ -51,11 +43,8 @@ class GCN(nn.Module):
         super(GCN, self).__init__()
         self.device = device
 
-        if emb_matrix is not None:
-            self.embed = nn.Embedding(*emb_matrix.shape)
-            self.embed.weight = nn.Parameter(emb_matrix.cuda(), requires_grad=False)
-        else:
-            self.embed = nn.Embedding(*emb_matrix_shape)
+        self.embed = nn.Embedding(*emb_matrix.shape)
+        self.embed.weight = nn.Parameter(emb_matrix.cuda(), requires_grad=False)
 
         self.rnn_layers = rnn_layers
         self.rnn_hidden = rnn_hidden

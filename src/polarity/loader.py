@@ -18,11 +18,18 @@ Batch = namedtuple(
 
 
 class DataLoader:
-    def __init__(self, vocabulary: Dict, sentences: List[ParsedSentence], batch_size: int,
-                 device: th.device):
+    def __init__(self,
+                 vocabulary: Dict[str, int],
+                 sentences: List[ParsedSentence],
+                 batch_size: int,
+                 device: th.device,
+                 unknown_word=UNKNOWN_WORD,
+                 pad_word=PAD_WORD):
         self.vocabulary = vocabulary
         self.batch_size = batch_size
         self.device = device
+        self.unknown_word = unknown_word
+        self.pad_word = pad_word
 
         data = self.process(sentences)
         self.num_examples = len(data)
@@ -49,7 +56,7 @@ class DataLoader:
                 if sentence.id2lemma[word] in self.vocabulary:
                     embed_ids.append(self.vocabulary[sentence.id2lemma[word]])
                 else:
-                    embed_ids.append(self.vocabulary[UNKNOWN_WORD])
+                    embed_ids.append(self.vocabulary[self.unknown_word])
 
         sentence_len = len(sentence.graph.nodes)
 
@@ -98,7 +105,7 @@ class DataLoader:
         sentence_lens = th.LongTensor([x.sentence_len for x in batch])
         polarity = th.LongTensor([x.polarity for x in batch])
 
-        embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[PAD_WORD])
+        embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[self.pad_word])
         mask = th.FloatTensor(batch_size, max_len).fill_(0)
         adj = []
         for i, b in enumerate(batch):

@@ -1,4 +1,4 @@
-from typing import List, Union, Dict
+from typing import List, Dict
 import logging
 import time
 import copy
@@ -9,13 +9,12 @@ import numpy as np
 from sklearn import metrics
 from gensim.models import KeyedVectors
 
-from .loader import DataLoader
+from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
+from src.review.parsed_sentence import ParsedSentence
+from src.review.target import Polarity
+from .loader import DataLoader, Batch
 from .gcn import GCNClassifier
 from .utils import torch_utils
-from .loader import Batch
-from src import SCORE_DECIMAL_LEN
-from src.review.parsed_sentence import ParsedSentence
-from src import polarity_classifier_dump_path
 from .score.display import display_score
 
 
@@ -24,31 +23,33 @@ class PolarityClassifier:
 
     Attributes
     ----------
-    word2vec : Union[KeyedVectors, Dict]
-        KeyedVectors to set pretrained embeddings.
-        Otherwise dict - to set vocabulary and shape of embeddings.
+    word2vec : KeyedVectors
+        Vocabulary and embed_matrix are extracting from word2vec.
+        Otherwise you can pass vocabulary and emb_matrix.
+    vocabulary : dict
+        dictionary where key is wordlemma_POS value - index in embedding matrix
+    emb_matrix : th.Tensor
+        matrix of pretrained embeddings
     """
     def __init__(self,
-                 word2vec: Union[KeyedVectors, Dict],
-                 batch_size=32,
-                 emb_matrix_shape=None):
+                 word2vec: KeyedVectors = ...,
+                 vocabulary: Dict[str, int] = ...,
+                 emb_matrix: th.Tensor = ...,
+                 batch_size=32):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
         if isinstance(word2vec, KeyedVectors):
             self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
             emb_matrix = th.FloatTensor(word2vec.vectors)
-        elif isinstance(word2vec, dict):
-            self.vocabulary = word2vec
-            emb_matrix = None
         else:
-            raise ValueError
+            self.vocabulary = vocabulary
 
         while True:
             try:
                 self.model = GCNClassifier(emb_matrix=emb_matrix,
                                            device=self.device,
-                                           emb_matrix_shape=emb_matrix_shape)
+                                           num_class=len(Polarity))
             except RuntimeError:
                 time.sleep(1)
             else:
@@ -86,10 +87,9 @@ class PolarityClassifier:
                                  device=self.device)
 
         train_acc_history, train_loss_history = [], []
-        val_acc_history, val_loss_history, f1_score_history = [], [], []
+        val_acc_history, val_loss_history, f1_history = [], [], []
 
-        for epoch in range(1, num_epoch + 1):
-
+        for epoch in range(num_epoch):
             # Train
             train_len = len(train_batches)
             self.model.train()
@@ -131,13 +131,13 @@ class PolarityClassifier:
             train_loss_history.append(train_loss)
             val_loss_history.append(val_loss)
             val_acc_history.append(val_acc)
-            f1_score_history.append(f1_score)
+            f1_history.append(f1_score)
         display_score(parameter_values=[x for x in range(num_epoch)],
                       train_values=train_acc_history,
                       val_values=val_acc_history)
         self.save_model()
 
-    def predict(self, sentences: List[ParsedSentence]):
+    def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         self.model.eval()
         sentences = copy.deepcopy(sentences)
         batches = DataLoader(sentences=sentences,
@@ -163,11 +163,10 @@ class PolarityClassifier:
         }, polarity_classifier_dump_path)
 
     @staticmethod
-    def load_model():
+    def load_model() -> 'PolarityClassifier':
         checkpoint = th.load(polarity_classifier_dump_path)
         model = checkpoint['model']
-        classifier = PolarityClassifier(
-            word2vec=checkpoint['vocabulary'],
-            emb_matrix_shape=[x for x in model['gcn.embed.weight'].shape])
+        classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],
+                                        emb_matrix=model['gcn.embed.weight'])
         classifier.model.load_state_dict(model)
         return classifier
