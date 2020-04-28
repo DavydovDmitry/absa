@@ -1,28 +1,11 @@
-"""Pipeline
-
-Upload reviews
-     |
-     |  List[Reviews]
-     V
-Spell check
-     |
-     |  List[Reviews]
-     V
-Dependency parsing
-     |
-     |  List[List[ParsedSentence]]
-     V
-Labeling
-"""
-
 import os
 
 # ------------------------------- Constants -----------------------------------
 SCORE_DECIMAL_LEN = 5
 
 # ------------------------------- Embeddings ----------------------------------
-UNKNOWN_WORD = '<unk>'
-PAD_WORD = '<pad>'
+UNKNOWN_WORD = '<unk>'  # index of that word will be using if word not found in vocabulary
+PAD_WORD = '<pad>'  # index of that word will be using to pad sentence to length to maximal length in batch
 
 # ------------------------------- Pathways ------------------------------------
 module_path = os.path.dirname(os.path.abspath(__file__))

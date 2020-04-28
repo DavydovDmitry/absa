@@ -76,12 +76,12 @@ class DataLoader:
                     target_index=target_index,
                     sentence_len=sentence_len,
                     embed_ids=embed_ids,
-                    adj=sentence.graph,  # todo: pass graph instead of matrix
+                    adj=sentence.graph,  # pass graph instead of matrix
                     mask=mask,
                     polarity=polarity))
         return processed
 
-    def __getitem__(self, key) -> Batch:
+    def __getitem__(self, key: int) -> Batch:
         """
         Return batch as named tuple where each element is th.Tensor where
         first dimension is element in batch
@@ -94,11 +94,8 @@ class DataLoader:
 
         batch = self.data[key]
         batch_size = len(batch)
-        # batch = list(zip(*batch))
-
-        # sort all fields by lens for easy RNN operations
         max_len = max([x.sentence_len for x in batch])
-        batch = sort_all(batch=batch)
+        batch = sort_by_sentence_len(batch=batch)
 
         sentence_index = th.LongTensor([x.sentence_index for x in batch])
         target_index = th.LongTensor([x.target_index for x in batch])
@@ -132,14 +129,16 @@ class DataLoader:
         return batch
 
     def __iter__(self) -> Batch:
+        """Iterate over batches"""
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
     def __len__(self) -> int:
+        """Return number of butches"""
         return len(self.data)
 
 
-def sort_all(batch: List[Batch]) -> List[Batch]:
+def sort_by_sentence_len(batch: List[Batch]) -> List[Batch]:
     """
     Sort all fields by descending order of lens.
 

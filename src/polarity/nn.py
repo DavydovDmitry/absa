@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from src.review.target import Polarity
-
 
 class GCNClassifier(nn.Module):
     def __init__(self, emb_matrix: th.Tensor, device: th.device, num_class, mem_dim=50):

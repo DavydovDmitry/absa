@@ -13,8 +13,7 @@ from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
-from .gcn import GCNClassifier
-from .utils import torch_utils
+from .nn import GCNClassifier
 from .score.display import display_score
 
 
@@ -70,12 +69,12 @@ class PolarityClassifier:
     def fit(self,
             train_sentences: List[ParsedSentence],
             val_sentences: List[ParsedSentence],
-            lr=0.01,
-            optimizer_name='adamax',
-            num_epoch=5):
-
+            optimizer_class=th.optim.Adamax,
+            lr=0.005,
+            weight_decay=0,
+            num_epoch=100):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-        optimizer = torch_utils.get_optimizer(optimizer_name, parameters, lr)
+        optimizer = optimizer_class(parameters, lr=lr, weight_decay=weight_decay)
 
         train_batches = DataLoader(sentences=train_sentences,
                                    batch_size=self.batch_size,
