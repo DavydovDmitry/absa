@@ -8,6 +8,7 @@ import networkx as nx
 import stanfordnlp
 from tqdm import tqdm
 
+from src import PROGRESSBAR_COLUMNS_NUM
 from src.review.review import Review, Target
 from src.review.parsed_sentence import ParsedSentence
 
@@ -46,7 +47,8 @@ def parse_reviews(reviews: List[Review],
     logging.info('Start dependency parsing...')
     parsed_reviews = []
 
-    with tqdm(total=len(reviews), file=sys.stdout) as progress_bar:
+    with tqdm(total=len(reviews), ncols=PROGRESSBAR_COLUMNS_NUM,
+              file=sys.stdout) as progress_bar:
         for review_index, review in enumerate(reviews):
             parsed_sentences = []
             for sentence_index, sentence in enumerate(review.sentences):
@@ -95,7 +97,9 @@ def parse_reviews(reviews: List[Review],
                                 parsed_target_nodes = []
                                 if target.nodes:
                                     for target_node in target.nodes:
-                                        for node_id in [x for x in id2prev_id if x in id2lemma]:
+                                        for node_id in [
+                                                x for x in id2prev_id if x in id2lemma
+                                        ]:
                                             if id2prev_id[node_id] == target_node:
                                                 parsed_target_nodes.append(node_id)
                                 targets.append(

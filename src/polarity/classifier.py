@@ -46,9 +46,19 @@ class PolarityClassifier:
         else:
             self.vocabulary = vocabulary
 
-        self.model = GCNClassifier(emb_matrix=emb_matrix,
-                                   device=self.device,
-                                   num_class=len(Polarity))
+        while True:
+            try:
+                self.model = GCNClassifier(emb_matrix=emb_matrix,
+                                           device=self.device,
+                                           num_class=len(Polarity))
+            except RuntimeError as e:
+                if 'out of memory' in str(e):
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            del p.grad
+                    th.cuda.empty_cache()
+            else:
+                break
         self.model.to(self.device)
 
     def batch_metrics(self, batch: Batch):
@@ -137,6 +147,7 @@ class PolarityClassifier:
                       train_values=train_acc_history,
                       val_values=val_acc_history)
         self.save_model()
+        return train_acc_history, val_acc_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         self.model.eval()

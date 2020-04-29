@@ -10,6 +10,7 @@ import re
 import requests
 from tqdm import tqdm
 
+from src import PROGRESSBAR_COLUMNS_NUM
 from src.review.review import Review
 
 
@@ -62,7 +63,8 @@ def spell_check(reviews: List[Review],
 
     spell_checked2init = [[dict() for _ in review.sentences] for review in reviews]
     logging.info('Start spell checking...')
-    with tqdm(total=len(reviews), file=sys.stdout) as progress_bar:
+    with tqdm(total=len(reviews), ncols=PROGRESSBAR_COLUMNS_NUM,
+              file=sys.stdout) as progress_bar:
         for review_index in range(start_review_index, len(reviews)):
             review = reviews[review_index]
             for sentence_index, sentence in enumerate(review.sentences):
@@ -95,8 +97,8 @@ def spell_check(reviews: List[Review],
                                     token = text_part[token_index]
                                     token_length = len(token)
                                     if start == correction['pos']:
-                                        appendix = sentence.text[text_shift +
-                                                                 token_index][correction['len']:]
+                                        appendix = sentence.text[
+                                            text_shift + token_index][correction['len']:]
                                         # One to many
                                         #      o
                                         #     /|\
@@ -125,7 +127,8 @@ def spell_check(reviews: List[Review],
                                                 token_index] = correction['s'][0] + ' '
                                             while token_length < correction['len']:
                                                 token_index += 1
-                                                sentence_copy.text[text_shift + token_index] = ''
+                                                sentence_copy.text[text_shift +
+                                                                   token_index] = ''
                                                 token_length += len(
                                                     text_part[token_index].strip()) + 1
 
@@ -149,8 +152,8 @@ def spell_check(reviews: List[Review],
                         sentence_copy.text.pop(curr_index)
 
                         if curr_index in spell_checked2init[review_index][sentence_index]:
-                            spell_checked2init[review_index][sentence_index][curr_index].append(
-                                prev_index)
+                            spell_checked2init[review_index][sentence_index][
+                                curr_index].append(prev_index)
                         else:
                             spell_checked2init[review_index][sentence_index][curr_index] = [
                                 prev_index,
@@ -158,12 +161,14 @@ def spell_check(reviews: List[Review],
 
                     # One to many
                     elif isinstance(sentence_copy.text[curr_index], list):
-                        for add_node_index, add_node in enumerate(sentence_copy.text[curr_index]):
-                            sentence_copy.text.insert(curr_index + add_node_index + 1, add_node)
-                            spell_checked2init[review_index][sentence_index][curr_index +
-                                                                             add_node_index] = [
-                                                                                 prev_index,
-                                                                             ]
+                        for add_node_index, add_node in enumerate(
+                                sentence_copy.text[curr_index]):
+                            sentence_copy.text.insert(curr_index + add_node_index + 1,
+                                                      add_node)
+                            spell_checked2init[review_index][sentence_index][
+                                curr_index + add_node_index] = [
+                                    prev_index,
+                                ]
                             if add_node_index == 0:
                                 continue
 
@@ -171,7 +176,8 @@ def spell_check(reviews: List[Review],
                                 # for next targets (include current)
                                 for node_index, node in enumerate(target.nodes):
                                     if node > curr_index:
-                                        sentence_copy.targets[target_index].nodes[node_index] += 1
+                                        sentence_copy.targets[target_index].nodes[
+                                            node_index] += 1
                                 # for current target
                                 if curr_index in target.nodes:
                                     sentence_copy.targets[target_index].nodes.insert(
@@ -184,8 +190,8 @@ def spell_check(reviews: List[Review],
                     # Bijection
                     else:
                         if curr_index in spell_checked2init[review_index][sentence_index]:
-                            spell_checked2init[review_index][sentence_index][curr_index].append(
-                                prev_index)
+                            spell_checked2init[review_index][sentence_index][
+                                curr_index].append(prev_index)
                         else:
                             spell_checked2init[review_index][sentence_index][curr_index] = [
                                 prev_index,

@@ -14,7 +14,7 @@ from gensim.models import KeyedVectors
 from tqdm import tqdm
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
-from src import sb12_classifier_path, sb12_train_data_path
+from src import sb12_classifier_path, sb12_train_data_path, PROGRESSBAR_COLUMNS_NUM
 from src.review.review import Target
 from src.review.parsed_sentence import ParsedSentence
 from .aspect_simularity import AttributeMarker, EntityMarker
@@ -152,7 +152,8 @@ class TargetClassifier:
         y = list()
 
         logging.info(f'{datetime.datetime.now().ctime()}. Start extracting features...')
-        with tqdm(total=len(sentences), file=sys.stdout) as progress_bar:
+        with tqdm(total=len(sentences), ncols=PROGRESSBAR_COLUMNS_NUM,
+                  file=sys.stdout) as progress_bar:
             for sentence_index, sentence in enumerate(sentences):
                 if not sentence.graph.nodes:
                     continue
@@ -195,7 +196,8 @@ class TargetClassifier:
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         sentences = copy.deepcopy(sentences)
         logging.info(f'{datetime.datetime.now().ctime()}. Start making predictions.')
-        with tqdm(total=len(sentences), file=sys.stdout) as progress_bar:
+        with tqdm(total=len(sentences), ncols=PROGRESSBAR_COLUMNS_NUM,
+                  file=sys.stdout) as progress_bar:
             for sentence_index, sentence in enumerate(sentences):
                 if not sentence.graph.nodes:
                     continue

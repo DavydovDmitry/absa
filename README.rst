@@ -13,6 +13,7 @@ Setup
 .. code-block:: bash
 
     poetry install --no-dev
+    printf 'y\n\n' | python -c 'import stanfordnlp; stanfordnlp.download("ru")'
 
 
 **Download embeddings**

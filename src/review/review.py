@@ -15,6 +15,7 @@ from gensim.models import KeyedVectors
 from tqdm import tqdm
 from .sentence import Sentence
 from .target import Target
+from src import PROGRESSBAR_COLUMNS_NUM
 
 
 class Review:
@@ -61,7 +62,7 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
 
     logging.info('Start reviews parsing...')
     reviews = []
-    with tqdm(total=len(reviews), file=sys.stdout) as progress_bar:
+    with tqdm(total=len(root), ncols=PROGRESSBAR_COLUMNS_NUM, file=sys.stdout) as progress_bar:
         for review_index, review in enumerate(root):
             sentences = []
             for sentence_index, sentence in enumerate(review.find('sentences')):
@@ -80,11 +81,13 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
                             start = 0
                             for token_index, token in enumerate(text_tokens):
                                 stop = start + len(token.strip())
-                                if (target_slice.start <= start) and (stop <= target_slice.stop):
+                                if (target_slice.start <= start) and (stop <=
+                                                                      target_slice.stop):
                                     nodes.append(token_index)
                                 start += len(token)
 
-                        targets.append(Target(nodes=nodes, category=category, polarity=polarity))
+                        targets.append(
+                            Target(nodes=nodes, category=category, polarity=polarity))
 
                 sentences.append(Sentence(text=text_tokens, targets=targets))
             reviews.append(Review(sentences))

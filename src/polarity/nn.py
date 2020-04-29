@@ -42,7 +42,7 @@ class GCN(nn.Module):
         self.device = device
 
         self.embed = nn.Embedding(*emb_matrix.shape)
-        self.embed.weight = nn.Parameter(emb_matrix.cuda(), requires_grad=False)
+        self.embed.weight = nn.Parameter(emb_matrix.to(device), requires_grad=False)
 
         self.rnn_layers = rnn_layers
         self.rnn_hidden = rnn_hidden

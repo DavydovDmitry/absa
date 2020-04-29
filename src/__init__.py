@@ -3,6 +3,7 @@ import os
 
 # ------------------------------- Constants -----------------------------------
 SCORE_DECIMAL_LEN = 5
+PROGRESSBAR_COLUMNS_NUM = 100
 
 # ------------------------------- Embeddings ----------------------------------
 UNKNOWN_WORD = '<unk>'  # index of that word will be using if word not found in vocabulary

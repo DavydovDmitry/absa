@@ -23,19 +23,27 @@ def preprocess_pipeline(word2vec: KeyedVectors = ..., is_train=True):
     - spell checking
     - building dependency trees
 
-    Upload reviews
-         |
-         |  List[Reviews]
-         V
-    Spell check
-         |
-         |  List[Reviews]
-         V
-    Dependency parsing
-         |
-         |  List[List[ParsedSentence]]
-         V
-    Labeling
+                  |
+                  | file_name
+                  V
+    +------------------------------------- Preprocess pipeline ----------+
+    |             |                                                      |
+    |             V                                                      |
+    |       Upload reviews                                               |
+    |             |                                                      |
+    |             |     List[Reviews]                                    |
+    |             V                                                      |
+    |         Spell check                                                |
+    |             |                                                      |
+    |             |     List[Reviews]                                    |
+    |             V                                                      |
+    |      Dependency parsing                                            |
+    |             |                                                      |
+    |             V                                                      |
+    +--------------------------------------------------------------------+
+                  |
+                  |     List[List[ParsedSentence]]
+                  V
 
     Make dumps of results of every stage, to not run all stages further.
     """
