@@ -17,7 +17,7 @@ Batch = namedtuple(
 class DataLoader:
     """DataLoader for polarity classifier.
 
-    Prepare batches for network.
+    Create batch element for every target.
 
     Attributes
     ----------

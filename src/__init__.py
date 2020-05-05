@@ -18,9 +18,6 @@ TEST_APPENDIX = '.test'  # suffix for test dumps
 train_reviews_path = os.path.join(competition_path, 'dataset', 'train.xml')
 test_reviews_path = os.path.join(competition_path, 'dataset', 'test.xml')
 
-test_a_reviews_path = os.path.join(competition_path, 'dataset', 'test_a.xml')
-test_b_reviews_path = os.path.join(competition_path, 'dataset', 'test_b.xml')
-
 rus_vectors_path = os.path.join(os.path.dirname(module_path), 'RusVectores')
 word2vec_model_path = os.path.join(rus_vectors_path, 'tayga_upos_skipgram_300_2_2019',
                                    'model.bin')
@@ -29,7 +26,7 @@ images_path = os.path.join(module_path, '../images')
 log_path = os.path.join(module_path, '../logs')
 
 # --------------------------------- Dumps -------------------------------------
-dumps_path = os.path.join(competition_path, 'dumps')
+dumps_path = os.path.join(module_path, 'dumps')
 
 checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')
 parsed_reviews_dump_path = os.path.join(dumps_path, 'dep_parsed_sentence')
