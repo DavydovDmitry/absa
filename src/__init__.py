@@ -10,20 +10,20 @@ UNKNOWN_WORD = '<unk>'  # index of that word will be using if word not found in 
 PAD_WORD = '<pad>'  # index of that word will be using to pad sentence to length to maximal length in batch
 
 # ------------------------------- Pathways ------------------------------------
-module_path = os.path.dirname(os.path.abspath(__file__))
-competition_path = os.path.join(module_path, '../datasets/SemEval2016')
+module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+competition_path = os.path.join(module_path, 'datasets/SemEval2016')
 
 TEST_APPENDIX = '.test'  # suffix for test dumps
 
 train_reviews_path = os.path.join(competition_path, 'dataset', 'train.xml')
 test_reviews_path = os.path.join(competition_path, 'dataset', 'test.xml')
 
-rus_vectors_path = os.path.join(os.path.dirname(module_path), 'RusVectores')
+rus_vectors_path = os.path.join(module_path, 'RusVectores')
 word2vec_model_path = os.path.join(rus_vectors_path, 'tayga_upos_skipgram_300_2_2019',
                                    'model.bin')
 
-images_path = os.path.join(module_path, '../images')
-log_path = os.path.join(module_path, '../logs')
+images_path = os.path.join(module_path, 'images')
+log_path = os.path.join(module_path, 'logs')
 
 # --------------------------------- Dumps -------------------------------------
 dumps_path = os.path.join(module_path, 'dumps')

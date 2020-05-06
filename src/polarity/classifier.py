@@ -9,12 +9,13 @@ import torch.nn.functional as F
 import numpy as np
 from sklearn import metrics
 from gensim.models import KeyedVectors
+from frozendict import frozendict
 
 from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
-from .nn import GCNClassifier
+from .nn.sequence_classifier import SequenceClassifier
 from .score.display import display_score
 
 
@@ -35,7 +36,7 @@ class PolarityClassifier:
                  word2vec: KeyedVectors = ...,
                  vocabulary: Dict[str, int] = ...,
                  emb_matrix: th.Tensor = ...,
-                 batch_size=32):
+                 batch_size=50):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
@@ -48,14 +49,15 @@ class PolarityClassifier:
 
         while True:
             try:
-                self.model = GCNClassifier(emb_matrix=emb_matrix,
-                                           device=self.device,
-                                           num_class=len(Polarity))
+                self.model = SequenceClassifier(emb_matrix=emb_matrix,
+                                                device=self.device,
+                                                num_class=len(Polarity))
             except RuntimeError as e:
                 if 'out of memory' in str(e):
-                    for p in self.model.parameters():
-                        if p.grad is not None:
-                            del p.grad
+                    # todo: handle
+                    # for p in self.model.parameters():
+                    #     if p.grad is not None:
+                    #         del p.grad
                     th.cuda.empty_cache()
             else:
                 break
@@ -63,8 +65,8 @@ class PolarityClassifier:
 
     def batch_metrics(self, batch: Batch):
         logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                         adj=batch.adj,
-                                         mask=batch.mask,
+                                         graph=batch.graph,
+                                         target_mask=batch.mask,
                                          sentence_len=batch.sentence_len)
         loss = F.cross_entropy(logits, batch.polarity, reduction='mean')
         corrects = (th.max(logits, 1)[1].view(
@@ -76,14 +78,16 @@ class PolarityClassifier:
             train_sentences: List[ParsedSentence],
             val_sentences: List[ParsedSentence],
             optimizer_class=th.optim.Adamax,
-            lr=0.005,
-            weight_decay=0,
-            num_epoch=5):
+            optimizer_params=frozendict({
+                'lr': 0.01,
+                'weight_decay': 0,
+            }),
+            num_epoch=50):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         logging.info(
             f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
         )
-        optimizer = optimizer_class(parameters, lr=lr, weight_decay=weight_decay)
+        optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
                                    batch_size=self.batch_size,
@@ -158,8 +162,8 @@ class PolarityClassifier:
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                             adj=batch.adj,
-                                             mask=batch.mask,
+                                             graph=batch.graph,
+                                             target_mask=batch.mask,
                                              sentence_len=batch.sentence_len)
             pred_labels = np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):
@@ -179,6 +183,6 @@ class PolarityClassifier:
         checkpoint = th.load(polarity_classifier_dump_path)
         model = checkpoint['model']
         classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],
-                                        emb_matrix=model['gcn.embed.weight'])
+                                        emb_matrix=model['nn.embed.weight'])
         classifier.model.load_state_dict(model)
         return classifier
