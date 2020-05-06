@@ -36,7 +36,7 @@ class PolarityClassifier:
                  word2vec: KeyedVectors = ...,
                  vocabulary: Dict[str, int] = ...,
                  emb_matrix: th.Tensor = ...,
-                 batch_size=32):
+                 batch_size=50):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
@@ -183,6 +183,6 @@ class PolarityClassifier:
         checkpoint = th.load(polarity_classifier_dump_path)
         model = checkpoint['model']
         classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],
-                                        emb_matrix=model['gcn.embed.weight'])
+                                        emb_matrix=model['nn.embed.weight'])
         classifier.model.load_state_dict(model)
         return classifier
