@@ -61,12 +61,11 @@ class PolarityClassifier:
                     th.cuda.empty_cache()
             else:
                 break
-        self.model.to(self.device)
 
     def batch_metrics(self, batch: Batch):
         logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
                                          graph=batch.graph,
-                                         target_mask=batch.mask,
+                                         target_mask=batch.target_mask,
                                          sentence_len=batch.sentence_len)
         loss = F.cross_entropy(logits, batch.polarity, reduction='mean')
         corrects = (th.max(logits, 1)[1].view(
@@ -82,7 +81,7 @@ class PolarityClassifier:
                 'lr': 0.01,
                 'weight_decay': 0,
             }),
-            num_epoch=50):
+            num_epoch=15):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         logging.info(
             f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
@@ -125,8 +124,8 @@ class PolarityClassifier:
                 logits, loss, acc = self.batch_metrics(batch=batch)
                 val_loss += loss.data
                 val_acc += acc
-                predictions += np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
-                labels += batch.polarity.data.cpu().numpy().tolist()
+                predictions += np.argmax(logits.data.numpy(), axis=1).tolist()
+                labels += batch.polarity.data.numpy().tolist()
             f1_score = metrics.f1_score(labels, predictions, average='macro')
 
             train_loss = train_loss / train_len
@@ -163,9 +162,9 @@ class PolarityClassifier:
         for batch_index, batch in enumerate(batches):
             logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
                                              graph=batch.graph,
-                                             target_mask=batch.mask,
+                                             target_mask=batch.target_mask,
                                              sentence_len=batch.sentence_len)
-            pred_labels = np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
+            pred_labels = np.argmax(logits.data.numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):
                 sentence_index = batch.sentence_index[item_index]
                 target_index = batch.target_index[item_index]

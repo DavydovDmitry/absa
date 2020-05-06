@@ -7,9 +7,20 @@ import dgl
 from src import UNKNOWN_WORD, PAD_WORD
 from src.review.parsed_sentence import ParsedSentence
 
-Batch = namedtuple('Batch', [
-    'sentence_index', 'target_index', 'sentence_len', 'embed_ids', 'graph', 'mask', 'polarity'
-])
+Batch = namedtuple(
+    'Batch',
+    [
+        # indexes to set classification results
+        'sentence_index',
+        'target_index',
+        # gpu part
+        'sentence_len',
+        'embed_ids',
+        'graph',
+        # cpu part
+        'target_mask',
+        'polarity'
+    ])
 
 
 class DataLoader:
@@ -69,12 +80,12 @@ class DataLoader:
 
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
-                mask = [1 for _ in embed_ids]
+                target_mask = [1 for _ in embed_ids]
             else:
-                mask = [0 for _ in embed_ids]
+                target_mask = [0 for _ in embed_ids]
                 for word_index, word in enumerate(sentence.get_sentence_order()):
                     if word in target.nodes:
-                        mask[word_index] = 1
+                        target_mask[word_index] = 1
             polarity = target.polarity.value
 
             processed.append(
@@ -83,7 +94,7 @@ class DataLoader:
                       sentence_len=sentence_len,
                       embed_ids=embed_ids,
                       graph=graph,
-                      mask=th.FloatTensor(mask),
+                      target_mask=th.FloatTensor(target_mask),
                       polarity=polarity))
         return processed
 
@@ -117,8 +128,8 @@ class DataLoader:
                       sentence_len=sentence_lens.to(self.device),
                       embed_ids=embed_ids.to(self.device),
                       graph=dgl.batch([item.graph for item in batch]),
-                      mask=th.cat([item.mask for item in batch]).to(self.device),
-                      polarity=polarity.to(self.device))
+                      target_mask=th.cat([item.target_mask for item in batch]),
+                      polarity=polarity)
         return batch
 
     def __iter__(self) -> Batch:

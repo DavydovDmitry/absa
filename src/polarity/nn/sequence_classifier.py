@@ -17,7 +17,7 @@ class SequenceClassifier(nn.Module):
         self.nn = LSTMNN(emb_matrix=emb_matrix,
                          device=self.device,
                          rnn_dim=rnn_dim,
-                         out_dim=tree_lstm_dim)
+                         out_dim=tree_lstm_dim).to(self.device)
         self.classifier = nn.Linear(tree_lstm_dim, num_class)
 
     def forward(self, embed_ids: th.Tensor, graph: dgl.DGLGraph, target_mask: th.Tensor,
@@ -25,7 +25,7 @@ class SequenceClassifier(nn.Module):
         h = self.nn(embed_ids=embed_ids, graph=graph, sentence_len=sentence_len)
 
         # get hidden state for each aspect
-        h = h[target_mask.nonzero().squeeze(1)]
+        h = h[target_mask.nonzero().squeeze(1)].cpu()
         target_lens = [
             int(x.sum().item()) for x in target_mask.split([l for l in sentence_len], dim=0)
         ]
