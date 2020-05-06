@@ -15,7 +15,7 @@ from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
-from .nn.sequence_classifier import SequenceClassifier
+from .nn.target_classifier import TargetClassifier
 from .score.display import display_score
 
 
@@ -36,7 +36,7 @@ class PolarityClassifier:
                  word2vec: KeyedVectors = ...,
                  vocabulary: Dict[str, int] = ...,
                  emb_matrix: th.Tensor = ...,
-                 batch_size=50):
+                 batch_size=100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
@@ -49,9 +49,9 @@ class PolarityClassifier:
 
         while True:
             try:
-                self.model = SequenceClassifier(emb_matrix=emb_matrix,
-                                                device=self.device,
-                                                num_class=len(Polarity))
+                self.model = TargetClassifier(emb_matrix=emb_matrix,
+                                              device=self.device,
+                                              num_class=len(Polarity))
             except RuntimeError as e:
                 if 'out of memory' in str(e):
                     # todo: handle
@@ -63,6 +63,7 @@ class PolarityClassifier:
                 break
 
     def batch_metrics(self, batch: Batch):
+        """Make a forward step and return metrics"""
         logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
                                          graph=batch.graph,
                                          target_mask=batch.target_mask,
@@ -81,7 +82,8 @@ class PolarityClassifier:
                 'lr': 0.01,
                 'weight_decay': 0,
             }),
-            num_epoch=15):
+            num_epoch=30):
+        """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         logging.info(
             f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
@@ -153,6 +155,18 @@ class PolarityClassifier:
         return train_acc_history, val_acc_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+        """Modify passed sentences. Define every target polarity.
+
+        Parameters
+        ----------
+        sentences : List[ParsedSentence]
+            Sentences with extracted targets.
+
+        Return
+        -------
+        sentences : List[ParsedSentence]
+            Sentences with defined polarity of every target.
+        """
         self.model.eval()
         sentences = copy.deepcopy(sentences)
         batches = DataLoader(sentences=sentences,
@@ -172,6 +186,7 @@ class PolarityClassifier:
         return sentences
 
     def save_model(self):
+        """Save model state."""
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
@@ -179,6 +194,7 @@ class PolarityClassifier:
 
     @staticmethod
     def load_model() -> 'PolarityClassifier':
+        """Load pretrained model."""
         checkpoint = th.load(polarity_classifier_dump_path)
         model = checkpoint['model']
         classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],

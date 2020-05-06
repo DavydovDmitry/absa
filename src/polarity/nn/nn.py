@@ -9,6 +9,11 @@ from .tree_lstm import ChildSumTreeLSTMCell
 
 
 class LSTMNN(nn.Module):
+    """Stack of Bi-LSTM and Tree-LSTM neural networks.
+
+    First one run through sequence elements order. The last one run
+    through dependency tree of sentence.
+    """
     def __init__(self,
                  emb_matrix: th.Tensor,
                  device: th.device,

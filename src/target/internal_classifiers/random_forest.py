@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from gensim.models import KeyedVectors
 import numpy as np
 
-from src.target.target_classifier import TargetClassifier
+from src.target.miner import TargetMiner
 from src.review.parsed_sentence import ParsedSentence
 from ..score.optimal_parameter_oob import analyse_parameter_oob
 from ..score.metrics import print_sb12
@@ -36,7 +36,7 @@ def analyze_random_forest(word2vec: KeyedVectors, train_sentences: List[ParsedSe
         parameters[name] = optimal_param
         logging.info(f'{name}: {optimal_param}')
 
-    train_df, train_y = TargetClassifier.load_data()
+    train_df, train_y = TargetMiner.load_data()
 
     #     train_df, train_y = TargetClassifier(word2vec=word2vec).get_df(
     #         sentences=train_sentences)
@@ -52,7 +52,7 @@ def analyze_random_forest(word2vec: KeyedVectors, train_sentences: List[ParsedSe
     # test
     sentences_pred = copy.deepcopy(test_sentences)
     classifier = classifier_class(**parameters)
-    target_classifier = TargetClassifier(classifier=classifier, word2vec=word2vec)
+    target_classifier = TargetMiner(classifier=classifier, word2vec=word2vec)
     target_classifier.fit(df=train_df, y=train_y)
     sentences_pred = target_classifier.predict(sentences_pred)
     print_sb12(sentences=test_sentences, sentences_pred=sentences_pred)

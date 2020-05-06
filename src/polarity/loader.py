@@ -10,14 +10,14 @@ from src.review.parsed_sentence import ParsedSentence
 Batch = namedtuple(
     'Batch',
     [
-        # indexes to set classification results
+        # Indexes to set classification results to sentence
         'sentence_index',
         'target_index',
-        # gpu part
+        # GPU part. This fields will be passed to GPU.
         'sentence_len',
         'embed_ids',
         'graph',
-        # cpu part
+        # CPU part
         'target_mask',
         'polarity'
     ])
@@ -26,12 +26,14 @@ Batch = namedtuple(
 class DataLoader:
     """DataLoader for polarity classifier.
 
-    Create batch element for every target.
+    Create batches from sentences. Create batch element for every target.
 
     Attributes
     ----------
     vocabulary : dict
-        dictionary where key is wordlemma_POS value - index in embedding matrix
+        dictionary where key is 'wordlemma_POS' value - index in embedding matrix
+    data : List[List[Batch]]
+        Split to chunks batch elements.
     """
     def __init__(self,
                  vocabulary: Dict[str, int],
@@ -47,8 +49,6 @@ class DataLoader:
         self.pad_word = pad_word
 
         data = self.process(sentences)
-        self.num_examples = len(data)
-
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
@@ -62,7 +62,13 @@ class DataLoader:
         return processed
 
     def process_sentence(self, sentence: ParsedSentence, sentence_index: int) -> List[Batch]:
-        """Process one sentence"""
+        """Process one sentence
+
+        Returns
+        -------
+        processed : List[Batch]
+            Batch elements for every target.
+        """
         processed = []
 
         embed_ids = []
@@ -98,18 +104,28 @@ class DataLoader:
                       polarity=polarity))
         return processed
 
-    def __getitem__(self, key: int) -> Batch:
+    def __getitem__(self, batch_index: int) -> Batch:
         """
-        Return batch as named tuple where each element is th.Tensor where
-        first dimension is element in batch
+        Return batch as named tuple where each element is th.Tensor or batched dgl.DGLGraph.
+        First dimension of tensors correspond to batch elements.
+
+        Parameters
+        ----------
+        batch_index : int
+            Index of batch in dataset.
+
+        Returns
+        -------
+        batch : Batch
+            namedtuple of th.Tensors and batched dgl.DGLGraph.
         """
 
-        if not isinstance(key, int):
+        if not isinstance(batch_index, int):
             raise TypeError
-        if key < 0 or key >= len(self.data):
+        if batch_index < 0 or batch_index >= len(self.data):
             raise IndexError
 
-        batch = self.data[key]
+        batch = self.data[batch_index]
         batch_size = len(batch)
         max_len = max([x.sentence_len for x in batch])
         batch = sort_by_sentence_len(batch=batch)
@@ -123,17 +139,16 @@ class DataLoader:
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
-        batch = Batch(sentence_index=sentence_index,
-                      target_index=target_index,
-                      sentence_len=sentence_lens.to(self.device),
-                      embed_ids=embed_ids.to(self.device),
-                      graph=dgl.batch([item.graph for item in batch]),
-                      target_mask=th.cat([item.target_mask for item in batch]),
-                      polarity=polarity)
-        return batch
+        return Batch(sentence_index=sentence_index,
+                     target_index=target_index,
+                     sentence_len=sentence_lens.to(self.device),
+                     embed_ids=embed_ids.to(self.device),
+                     graph=dgl.batch([item.graph for item in batch]),
+                     target_mask=th.cat([item.target_mask for item in batch]),
+                     polarity=polarity)
 
     def __iter__(self) -> Batch:
-        """Iterate over batches"""
+        """Iterate over batches - chunks of dataset"""
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
@@ -143,8 +158,7 @@ class DataLoader:
 
 
 def sort_by_sentence_len(batch: List[Batch]) -> List[Batch]:
-    """
-    Sort sentences by descending order of it's len.
+    """Sort sentences by descending order of it's len.
 
     Not return original index because there is already sentence and target
     indexes in batch.

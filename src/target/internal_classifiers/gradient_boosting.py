@@ -6,7 +6,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from gensim.models import KeyedVectors
 import numpy as np
 
-from src.target.target_classifier import TargetClassifier
+from src.target.miner import TargetMiner
 from src.review.parsed_sentence import ParsedSentence
 from ..score.optimal_parameter import analyse_parameter
 from ..score.metrics import print_sb12
@@ -42,7 +42,7 @@ def analyze_gradient_boosting(word2vec: KeyedVectors,
     # test
     sentences_pred = copy.deepcopy(test_sentences)
     classifier = classifier_class(**parameters)
-    target_classifier = TargetClassifier(classifier=classifier, word2vec=word2vec)
+    target_classifier = TargetMiner(classifier=classifier, word2vec=word2vec)
     target_classifier.fit(sentences=train_sentences)
     sentences_pred = target_classifier.predict(sentences_pred)
     print_sb12(sentences=test_sentences, sentences_pred=sentences_pred)

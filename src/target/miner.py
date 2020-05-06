@@ -22,7 +22,7 @@ from .labels import POS_LABELS, DEP_LABELS, ASPECT_LABELS, NONE_ASPECT_LABEL
 from .score.metrics import get_sb12
 
 
-class TargetClassifier:
+class TargetMiner:
     def __init__(self,
                  word2vec: KeyedVectors,
                  classifier=None,
@@ -259,7 +259,7 @@ class TargetClassifier:
             pickle.dump(self, f)
 
     @staticmethod
-    def load_classifier() -> 'TargetClassifier':
+    def load_classifier() -> 'TargetMiner':
         with open(sb12_classifier_path, 'rb') as f:
             classifier = pickle.load(f)
         return classifier

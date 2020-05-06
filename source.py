@@ -13,7 +13,7 @@ from src.preprocess.dep_parse import load_parsed_reviews
 from src import parsed_reviews_dump_path
 from src.utils.embedding import get_embeddings
 from src.target.internal_classifiers import analyze_random_forest
-from src.target.target_classifier import TargetClassifier
+from src.target.miner import TargetMiner
 from src.target.internal_classifiers.random_forest import parameters as random_forest_parameters
 from src.target.score.metrics import print_sb12
 from src.target.score.metrics import print_sb3
@@ -50,7 +50,7 @@ def targets_extraction(train_sentences: List[ParsedSentence],
                        test_sentences: List[ParsedSentence]):
     """Print metric for target extraction"""
     classifier = RandomForestClassifier(**random_forest_parameters)
-    target_classifier = TargetClassifier(classifier=classifier, word2vec=word2vec)
+    target_classifier = TargetMiner(classifier=classifier, word2vec=word2vec)
     target_classifier.fit(sentences=train_sentences)
     sentences_pred = target_classifier.predict(test_sentences)
     print_sb12(sentences=test_sentences, sentences_pred=sentences_pred)

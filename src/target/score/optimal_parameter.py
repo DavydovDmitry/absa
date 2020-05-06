@@ -5,7 +5,7 @@ from tqdm import tqdm
 from gensim.models import KeyedVectors
 from sklearn.model_selection import KFold
 
-from src.target.target_classifier import TargetClassifier
+from src.target.miner import TargetMiner
 from src.review.parsed_sentence import ParsedSentence
 from .display import display_score
 
@@ -21,7 +21,7 @@ def calculate_score(sentences: List[ParsedSentence], classifier_class: type,
     scores = list()
     for train_indexes, test_indexes in KFold(n_splits=N_SPLITS).split(sentences):
         classifier = classifier_class(**{**fixed_parameters, parameter_name: parameter_val})
-        target_classifier = TargetClassifier(classifier=classifier, word2vec=word2vec)
+        target_classifier = TargetMiner(classifier=classifier, word2vec=word2vec)
         target_classifier.fit(sentences=[x for x in map(sentences.__getitem__, train_indexes)])
         scores.append(
             target_classifier.score(
