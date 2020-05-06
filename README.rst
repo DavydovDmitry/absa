@@ -28,3 +28,12 @@ Setup
 Take a look at `RusVectōrēs <https://rusvectores.org/ru/models/>`_ for
 another pretrained embeddings. In this case don't forget to replace filename
 in `src/__init__.py <https://gitlab.com/davydovdmitry/diploma-research/-/blob/master/src/__init__.py>`_
+
+
+**Download dataset**
+
+.. code-block:: bash
+
+    mkdir ./datasets/SemEval2016/
+    wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1RZUyBrWQ0OwlIsmN0axewKg21koYmgQf' -O ./datasets/SemEval2016/train.xml
+    wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1JR3gblfNXQHApmDzY4FCCjv_0wVug7dO' -O ./datasets/SemEval2016/test.xml

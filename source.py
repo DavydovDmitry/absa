@@ -5,6 +5,8 @@ import datetime
 import os
 
 from sklearn.ensemble import RandomForestClassifier
+import numpy as np
+import torch as th
 
 from src import TEST_APPENDIX, log_path
 from src.preprocess.dep_parse import load_parsed_reviews
@@ -69,6 +71,10 @@ def polarity_classification(train_sentences: List[ParsedSentence],
 
 
 if __name__ == "__main__":
+    np.random.seed(SEED)
+    th.manual_seed(SEED)
+    th.cuda.manual_seed(SEED)
+
     configure_logging()
     word2vec = get_embeddings()
 
