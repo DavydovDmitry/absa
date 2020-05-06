@@ -1,6 +1,33 @@
 *****
-Setup
+ABSA
 *****
+This is pipeline for aspect-based sentiment analysis. Essential stages:
+
+1. Preprocess::
+
+    +------------------------------------- Preprocess pipeline ----------+
+    |             |                                                      |
+    |             V                                                      |
+    |       Upload reviews                                               |
+    |             |                                                      |
+    |             |     List[Reviews]                                    |
+    |             V                                                      |
+    |         Spell check                                                |
+    |             |                                                      |
+    |             |     List[Reviews]                                    |
+    |             V                                                      |
+    |      Dependency parsing                                            |
+    |             |                                                      |
+    |             V                                                      |
+    +--------------------------------------------------------------------+
+
+2. Aspect term extraction
+
+3. Polarity classification
+
+----------
+Setup
+----------
 
 **Requirements**
 
@@ -8,8 +35,15 @@ Setup
 - `Poetry <https://python-poetry.org/docs/>`_>=0.12 # or another dependency manager
 - `Torch <https://pytorch.org/get-started/locally/>`_>=1.5
 
+To install all requisites you can execute script:
 
-**Install dependencies with poetry**
+.. code-block:: bash
+
+    ./setup.sh
+
+Or run by yourself:
+
+* Install dependencies with poetry
 
 .. code-block:: bash
 
@@ -17,7 +51,7 @@ Setup
     printf 'y\n\n' | python -c 'import stanfordnlp; stanfordnlp.download("ru")'
 
 
-**Download embeddings**
+* Download pretrained embeddings
 
 .. code-block:: bash
 
@@ -30,7 +64,7 @@ another pretrained embeddings. In this case don't forget to replace filename
 in `src/__init__.py <https://gitlab.com/davydovdmitry/diploma-research/-/blob/master/src/__init__.py>`_
 
 
-**Download dataset**
+* Download dataset
 
 .. code-block:: bash
 
