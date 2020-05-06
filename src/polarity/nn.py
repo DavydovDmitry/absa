@@ -69,6 +69,8 @@ class GCN(nn.Module):
 
         self.tree_lstm = ChildSumTreeLSTMCell(rnn_hidden * 2 if bidirectional else rnn_hidden,
                                               mem_dim)
+        self.tree_lstm_hidden = nn.Linear(rnn_hidden * 2 if bidirectional else rnn_hidden,
+                                          mem_dim)
 
         self.in_drop = nn.Dropout(input_dropout)
         self.rnn_drop = nn.Dropout(rnn_dropout)
@@ -90,8 +92,10 @@ class GCN(nn.Module):
         g.register_reduce_func(self.tree_lstm.reduce_func)
         g.register_apply_node_func(self.tree_lstm.apply_node_func)
         g.ndata['iou'] = self.tree_lstm.W_iou(x)
-        g.ndata['h'], g.ndata['c'] = self.tree_lstm_zero_state(
-            number_of_nodes=graph.number_of_nodes(), hidden_size=self.mem_dim)
+        g.ndata['h'] = self.tree_lstm_hidden(x)
+        g.ndata['c'] = Variable(th.zeros((graph.number_of_nodes(), self.mem_dim),
+                                         dtype=th.float32),
+                                requires_grad=False).to(self.device)
         dgl.prop_nodes_topo(g)
         x = self.gcn_drop(g.ndata.pop('h'))
 
@@ -117,11 +121,6 @@ class GCN(nn.Module):
         h0 = c0 = Variable(th.zeros(*state_shape, dtype=th.float32), requires_grad=False)
         return h0.to(self.device), c0.to(self.device)
 
-    def tree_lstm_zero_state(self, number_of_nodes, hidden_size):
-        h0 = c0 = Variable(th.zeros((number_of_nodes, hidden_size), dtype=th.float32),
-                           requires_grad=False)
-        return h0.to(self.device), c0.to(self.device)
-
 
 class ChildSumTreeLSTMCell(nn.Module):
     def __init__(self, x_size: int, h_size: int):
@@ -145,5 +144,5 @@ class ChildSumTreeLSTMCell(nn.Module):
         i, o, u = th.chunk(iou, 3, 1)
         i, o, u = th.sigmoid(i), th.sigmoid(o), th.tanh(u)
         c = i * u + nodes.data['c']
-        h = o * th.tanh(c)
+        h = nodes.data['h'] + o * th.tanh(c)
         return {'h': h, 'c': c}
