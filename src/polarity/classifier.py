@@ -9,12 +9,13 @@ import torch.nn.functional as F
 import numpy as np
 from sklearn import metrics
 from gensim.models import KeyedVectors
+from frozendict import frozendict
 
 from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
-from .nn import GCNClassifier
+from .nn.sequence_classifier import SequenceClassifier
 from .score.display import display_score
 
 
@@ -48,11 +49,12 @@ class PolarityClassifier:
 
         while True:
             try:
-                self.model = GCNClassifier(emb_matrix=emb_matrix,
-                                           device=self.device,
-                                           num_class=len(Polarity))
+                self.model = SequenceClassifier(emb_matrix=emb_matrix,
+                                                device=self.device,
+                                                num_class=len(Polarity))
             except RuntimeError as e:
                 if 'out of memory' in str(e):
+                    # todo: handle
                     # for p in self.model.parameters():
                     #     if p.grad is not None:
                     #         del p.grad
@@ -76,14 +78,16 @@ class PolarityClassifier:
             train_sentences: List[ParsedSentence],
             val_sentences: List[ParsedSentence],
             optimizer_class=th.optim.Adamax,
-            lr=0.005,
-            weight_decay=0,
+            optimizer_params=frozendict({
+                'lr': 0.01,
+                'weight_decay': 0,
+            }),
             num_epoch=50):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         logging.info(
             f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
         )
-        optimizer = optimizer_class(parameters, lr=lr, weight_decay=weight_decay)
+        optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
                                    batch_size=self.batch_size,
