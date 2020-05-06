@@ -72,8 +72,8 @@ if __name__ == "__main__":
     configure_logging()
     word2vec = get_embeddings()
 
-    preprocess_pipeline(word2vec=word2vec, is_train=True)
-    preprocess_pipeline(word2vec=word2vec, is_train=False)
+    # preprocess_pipeline(word2vec=word2vec, is_train=True)
+    # preprocess_pipeline(word2vec=word2vec, is_train=False)
 
     train_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path)
     train_sentences = [x for x in reduce(lambda x, y: x + y, train_reviews)]
@@ -81,5 +81,5 @@ if __name__ == "__main__":
     test_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path + TEST_APPENDIX)
     test_sentences = [x for x in reduce(lambda x, y: x + y, test_reviews)]
 
-    targets_extraction(train_sentences=train_sentences, test_sentences=test_sentences)
+    # targets_extraction(train_sentences=train_sentences, test_sentences=test_sentences)
     polarity_classification(train_sentences=train_sentences, test_sentences=test_sentences)

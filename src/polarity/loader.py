@@ -1,17 +1,15 @@
-import copy
 from typing import List, Dict
 from collections import namedtuple
 
 import torch as th
-import numpy as np
-import networkx as nx
+import dgl
 
 from src import UNKNOWN_WORD, PAD_WORD
 from src.review.parsed_sentence import ParsedSentence
 
-Batch = namedtuple(
-    'Batch',
-    ['sentence_index', 'target_index', 'sentence_len', 'embed_ids', 'adj', 'mask', 'polarity'])
+Batch = namedtuple('Batch', [
+    'sentence_index', 'target_index', 'sentence_len', 'embed_ids', 'graph', 'mask', 'polarity'
+])
 
 
 class DataLoader:
@@ -66,6 +64,9 @@ class DataLoader:
 
         sentence_len = len(sentence.graph.nodes)
 
+        graph = dgl.DGLGraph()
+        graph.from_networkx(sentence.graph)
+
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
                 mask = [1 for _ in embed_ids]
@@ -77,14 +78,13 @@ class DataLoader:
             polarity = target.polarity.value
 
             processed.append(
-                Batch(
-                    sentence_index=sentence_index,
-                    target_index=target_index,
-                    sentence_len=sentence_len,
-                    embed_ids=embed_ids,
-                    adj=sentence.graph,  # pass graph instead of matrix
-                    mask=mask,
-                    polarity=polarity))
+                Batch(sentence_index=sentence_index,
+                      target_index=target_index,
+                      sentence_len=sentence_len,
+                      embed_ids=embed_ids,
+                      graph=graph,
+                      mask=th.FloatTensor(mask),
+                      polarity=polarity))
         return processed
 
     def __getitem__(self, key: int) -> Batch:
@@ -109,28 +109,15 @@ class DataLoader:
         polarity = th.LongTensor([x.polarity for x in batch])
 
         embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[self.pad_word])
-        mask = th.FloatTensor(batch_size, max_len).fill_(0)
-        adj = []
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
-            mask[i, :b.sentence_len] = th.FloatTensor(b.mask)
-
-            # adjacency matrix
-            graph = copy.deepcopy(b.adj)
-            for node in graph:
-                graph.add_edge(node, node)
-            a = np.zeros((1, max_len, max_len), dtype=np.float32)
-            a[:, :b.sentence_len, :b.sentence_len] = nx.to_numpy_matrix(graph)
-            adj.append(a)
-        adj = np.concatenate(adj, axis=0)
-        adj = th.from_numpy(adj)
 
         batch = Batch(sentence_index=sentence_index,
                       target_index=target_index,
                       sentence_len=sentence_lens.to(self.device),
                       embed_ids=embed_ids.to(self.device),
-                      adj=adj.to(self.device),
-                      mask=mask.to(self.device),
+                      graph=dgl.batch([item.graph for item in batch]),
+                      mask=th.cat([item.mask for item in batch]).to(self.device),
                       polarity=polarity.to(self.device))
         return batch
 

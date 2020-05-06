@@ -53,9 +53,9 @@ class PolarityClassifier:
                                            num_class=len(Polarity))
             except RuntimeError as e:
                 if 'out of memory' in str(e):
-                    for p in self.model.parameters():
-                        if p.grad is not None:
-                            del p.grad
+                    # for p in self.model.parameters():
+                    #     if p.grad is not None:
+                    #         del p.grad
                     th.cuda.empty_cache()
             else:
                 break
@@ -63,8 +63,8 @@ class PolarityClassifier:
 
     def batch_metrics(self, batch: Batch):
         logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                         adj=batch.adj,
-                                         mask=batch.mask,
+                                         graph=batch.graph,
+                                         target_mask=batch.mask,
                                          sentence_len=batch.sentence_len)
         loss = F.cross_entropy(logits, batch.polarity, reduction='mean')
         corrects = (th.max(logits, 1)[1].view(
@@ -78,7 +78,7 @@ class PolarityClassifier:
             optimizer_class=th.optim.Adamax,
             lr=0.005,
             weight_decay=0,
-            num_epoch=5):
+            num_epoch=50):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         logging.info(
             f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
@@ -158,8 +158,8 @@ class PolarityClassifier:
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                             adj=batch.adj,
-                                             mask=batch.mask,
+                                             graph=batch.graph,
+                                             target_mask=batch.mask,
                                              sentence_len=batch.sentence_len)
             pred_labels = np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):

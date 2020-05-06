@@ -9,6 +9,5 @@ volumes/
 RusVectores/*
 !RusVectores/README.rst
 
-# nnetwork weights take too many space
 **/dumps/
 **/logs/
