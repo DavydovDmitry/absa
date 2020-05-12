@@ -24,5 +24,5 @@ class ChildSumTreeLSTMCell(nn.Module):
         i, o, u = th.chunk(iou, 3, 1)
         i, o, u = th.sigmoid(i), th.sigmoid(o), th.tanh(u)
         c = i * u + nodes.data['c']
-        h = nodes.data['h'] + o * th.tanh(c)
+        h = o * th.tanh(c)
         return {'h': h, 'c': c}

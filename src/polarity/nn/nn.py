@@ -38,7 +38,6 @@ class LSTMNN(nn.Module):
                            hidden_size=rnn_dim,
                            num_layers=self.rnn_layers,
                            batch_first=True,
-                           dropout=rnn_dropout,
                            bidirectional=self.bidirectional)
 
         # tree lstm layer

@@ -76,31 +76,34 @@ class PolarityClassifier:
 
     def fit(self,
             train_sentences: List[ParsedSentence],
-            val_sentences: List[ParsedSentence],
+            val_sentences=None,
             optimizer_class=th.optim.Adamax,
             optimizer_params=frozendict({
                 'lr': 0.01,
                 'weight_decay': 0,
             }),
-            num_epoch=30):
+            num_epoch=30,
+            verbose=True):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-        logging.info(
-            f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
-        )
+        if verbose:
+            logging.info(
+                f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
+            )
         optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
                                    batch_size=self.batch_size,
                                    vocabulary=self.vocabulary,
                                    device=self.device)
-        val_batches = DataLoader(sentences=val_sentences,
-                                 batch_size=self.batch_size,
-                                 vocabulary=self.vocabulary,
-                                 device=self.device)
+        if val_sentences:
+            val_batches = DataLoader(sentences=val_sentences,
+                                     batch_size=self.batch_size,
+                                     vocabulary=self.vocabulary,
+                                     device=self.device)
+            val_acc_history, val_loss_history, f1_history = [], [], []
 
         train_acc_history, train_loss_history = [], []
-        val_acc_history, val_loss_history, f1_history = [], [], []
 
         for epoch in range(num_epoch):
             # Train
@@ -118,41 +121,49 @@ class PolarityClassifier:
                 train_acc += acc
 
             # Validation
-            val_len = len(val_batches)
-            self.model.eval()
-            predictions, labels = [], []
-            val_loss, val_acc = 0., 0.
-            for i, batch in enumerate(val_batches):
-                logits, loss, acc = self.batch_metrics(batch=batch)
-                val_loss += loss.data
-                val_acc += acc
-                predictions += np.argmax(logits.data.numpy(), axis=1).tolist()
-                labels += batch.polarity.data.numpy().tolist()
-            f1_score = metrics.f1_score(labels, predictions, average='macro')
+            if val_sentences:
+                val_len = len(val_batches)
+                self.model.eval()
+                predictions, labels = [], []
+                val_loss, val_acc = 0., 0.
+                for i, batch in enumerate(val_batches):
+                    logits, loss, acc = self.batch_metrics(batch=batch)
+                    val_loss += loss.data
+                    val_acc += acc
+                    predictions += np.argmax(logits.data.numpy(), axis=1).tolist()
+                    labels += batch.polarity.data.numpy().tolist()
+                f1_score = metrics.f1_score(labels, predictions, average='macro')
 
-            train_loss = train_loss / train_len
-            train_acc = train_acc / train_len
-            val_loss = val_loss / val_len
-            val_acc = val_acc / val_len
-            logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-            logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-            logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
-                         f'acc: {train_acc:.{SCORE_DECIMAL_LEN}f}')
-            logging.info(f'Validation ' +
-                         f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
-                         f'acc: {val_acc:.{SCORE_DECIMAL_LEN}f}| ' +
-                         f'f1_score: {f1_score:.{SCORE_DECIMAL_LEN}f}')
+                train_loss = train_loss / train_len
+                train_acc = train_acc / train_len
+                val_loss = val_loss / val_len
+                val_acc = val_acc / val_len
+                val_loss_history.append(val_loss)
+                val_acc_history.append(val_acc)
+                f1_history.append(f1_score)
+
+                if verbose:
+                    logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
+                    logging.info(
+                        f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
+                    logging.info(f'Train      ' +
+                                 f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
+                                 f'acc: {train_acc:.{SCORE_DECIMAL_LEN}f}')
+                    logging.info(f'Validation ' +
+                                 f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
+                                 f'acc: {val_acc:.{SCORE_DECIMAL_LEN}f}| ' +
+                                 f'f1_score: {f1_score:.{SCORE_DECIMAL_LEN}f}')
 
             train_acc_history.append(train_acc)
             train_loss_history.append(train_loss)
-            val_loss_history.append(val_loss)
-            val_acc_history.append(val_acc)
-            f1_history.append(f1_score)
-        display_score(parameter_values=[x for x in range(num_epoch)],
-                      train_values=train_acc_history,
-                      val_values=val_acc_history)
+
+        # display_score(parameter_values=[x for x in range(num_epoch)],
+        #               train_values=train_acc_history,
+        #               val_values=val_acc_history)
         self.save_model()
-        return train_acc_history, val_acc_history
+        if val_sentences:
+            return train_acc_history, val_acc_history
+        return train_acc_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         """Modify passed sentences. Define every target polarity.

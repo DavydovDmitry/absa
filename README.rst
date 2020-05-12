@@ -55,9 +55,9 @@ Or run by yourself:
 
 .. code-block:: bash
 
-    wget http://vectors.nlpl.eu/repository/20/185.zip -P ./RusVectores/
-    unzip RusVectores/185.zip -d RusVectores/tayga_upos_skipgram_300_2_2019
-    rm RusVectores/185.zip
+    wget http://vectors.nlpl.eu/repository/20/185.zip -P ./embeddings/
+    unzip embeddings/185.zip -d embeddings/tayga_upos_skipgram_300_2_2019
+    rm embeddings/185.zip
 
 Take a look at `RusVectōrēs <https://rusvectores.org/ru/models/>`_ for
 another pretrained embeddings. In this case don't forget to replace filename

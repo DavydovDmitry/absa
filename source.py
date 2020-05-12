@@ -65,7 +65,7 @@ def polarity_classification(train_sentences: List[ParsedSentence],
                             test_sentences: List[ParsedSentence]):
     """Print metric for polarity classification"""
     classifier = PolarityClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences, test_sentences)
+    classifier.fit(train_sentences=train_sentences)
     test_sentences_pred = classifier.predict(test_sentences)
     print_sb3(sentences_pred=test_sentences_pred, sentences=test_sentences)
 

@@ -4,8 +4,8 @@
 **/.ipynb_checkpoints/
 **/__pycache__/
 
-RusVectores/*
-!RusVectores/README.rst
+embeddings/*
+!embeddings/README.rst
 datasets
 **/dumps/
 **/logs/
