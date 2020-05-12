@@ -83,7 +83,8 @@ class PolarityClassifier:
                 'weight_decay': 0,
             }),
             num_epoch=30,
-            verbose=True):
+            verbose=True,
+            save_state=True):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         if verbose:
@@ -157,10 +158,8 @@ class PolarityClassifier:
             train_acc_history.append(train_acc)
             train_loss_history.append(train_loss)
 
-        # display_score(parameter_values=[x for x in range(num_epoch)],
-        #               train_values=train_acc_history,
-        #               val_values=val_acc_history)
-        self.save_model()
+        if save_state:
+            self.save_model()
         if val_sentences:
             return train_acc_history, val_acc_history
         return train_acc_history
