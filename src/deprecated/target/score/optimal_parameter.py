@@ -5,7 +5,7 @@ from tqdm import tqdm
 from gensim.models import KeyedVectors
 from sklearn.model_selection import KFold
 
-from src.target.miner import TargetMiner
+from src.deprecated.target.miner import TargetMiner
 from src.review.parsed_sentence import ParsedSentence
 from .display import display_score
 

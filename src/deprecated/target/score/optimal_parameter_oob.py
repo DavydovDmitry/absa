@@ -5,7 +5,7 @@ from tqdm import tqdm
 import pandas as pd
 from gensim.models import KeyedVectors
 
-from src.target.miner import TargetMiner
+from src.deprecated.target.miner import TargetMiner
 from .optimal_parameter import display_score
 
 

@@ -36,4 +36,5 @@ sb12_classifier_path = os.path.join(dumps_path, 'sb12_classifier')
 sb12_train_data_path = os.path.join(dumps_path, 'sb12_train_data')
 sb12_test_data_path = os.path.join(dumps_path, 'sb12_test_data')
 
+aspect_classifier_dump_path = os.path.join(dumps_path, 'aspect_classifier.pt')
 polarity_classifier_dump_path = os.path.join(dumps_path, 'polarity_classifier.pt')
