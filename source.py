@@ -1,3 +1,21 @@
+"""
++------------------------------------- ABSA pipeline ----------------+
+|             |                                                      |
+|             V                                                      |
+|   Aspect term extraction                                           |
+|             |                                                      |
+|             |                                                      |
+|             V                                                      |
+|    Aspect classification                                           |
+|             |                                                      |
+|             |                                                      |
+|             V                                                      |
+|   Polarity Classification                                          |
+|             |                                                      |
+|             V                                                      |
++--------------------------------------------------------------------+
+"""
+
 import logging
 from typing import List
 from functools import reduce
@@ -43,8 +61,10 @@ def configure_logging():
 
 def aspect_classification(train_sentences: List[ParsedSentence],
                           test_sentences: List[ParsedSentence]):
-    classifier = AspectClassifier(word2vec=word2vec)
+    # classifier = AspectClassifier(word2vec=word2vec)
+    classifier = AspectClassifier.load_model()
     # classifier.fit(train_sentences=train_sentences)
+    classifier.select_threshold(train_sentences)
 
     test_sentences_pred = copy.deepcopy(test_sentences)
     for sentence in test_sentences_pred:
