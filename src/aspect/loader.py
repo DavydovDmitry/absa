@@ -55,7 +55,7 @@ class DataLoader:
         """Process all sentences"""
         processed = []
         for sentence_index, sentence in enumerate(sentences):
-            if sentence.graph.nodes and sentence.targets:
+            if len(sentence):
                 processed.append(
                     self.process_sentence(sentence=sentence, sentence_index=sentence_index))
         return processed
@@ -80,6 +80,8 @@ class DataLoader:
         labels = th.zeros(size=(sentence_len, self.aspect_labels.shape[0]), dtype=th.float)
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
+                continue
+                # todo:
                 labels[:, np.where(self.aspect_labels == target.category)] = 1.0
             else:
                 for word_index, word in enumerate(sentence.get_sentence_order()):

@@ -4,6 +4,7 @@ import sys
 import copy
 from functools import reduce
 from itertools import chain
+from dataclasses import dataclass
 
 import scipy
 import torch as th
@@ -18,6 +19,13 @@ from src.review.target import Target
 from .loader import DataLoader, Batch
 from .nn import NeuralNetwork
 from .labels import ASPECT_LABELS
+
+
+@dataclass
+class Score:
+    precision: float
+    recall: float
+    f1: float
 
 
 class AspectClassifier:
@@ -70,18 +78,7 @@ class AspectClassifier:
                 break
 
         self.criterion = th.nn.BCEWithLogitsLoss()
-        self.thresholds = np.array([-3] * self.num_labels)
-
-    def batch_metrics(self, batch: Batch):
-        """Make a forward step and return metrics"""
-        logits = self.model(embed_ids=batch.embed_ids,
-                            graph=batch.graph,
-                            sentence_len=batch.sentence_len)
-        loss = th.nn.BCEWithLogitsLoss(logits, batch.polarity)
-        corrects = (th.max(logits, 1)[1].view(
-            batch.polarity.size()).data == batch.polarity.data).sum()
-        acc = np.float(corrects) / batch.polarity.size()[0]
-        return logits, loss, acc
+        self.thresholds = np.array([-4] * self.num_labels)
 
     def get_targets(self, logits: th.Tensor, sentence_len: th.Tensor) -> List[List[Target]]:
         targets = []
@@ -98,9 +95,10 @@ class AspectClassifier:
             target_terms = []
             target_aspects_id = set()
             # current word
-            term, _ = term_indexes[0]
+            term = term_indexes[0][0].item()
             aspects_id = set()
-            for word_id, label_id in chain(term_indexes, (None, None)):
+            for word_id, label_id in chain([(x[0].item(), x[1].item()) for x in term_indexes],
+                                           [(None, None)]):
                 if word_id == term:
                     aspects_id.add(label_id)
                 else:
@@ -113,11 +111,11 @@ class AspectClassifier:
                             targets.append(
                                 Target(nodes=target_terms, category=self.aspect_labels[a]))
                         target_terms = [term]
-                        target_aspects = aspects_id
+                        target_aspects_id = aspects_id
 
                     # next word
                     term = word_id
-                    aspects = set([label_id])
+                    aspects_id = set([label_id])
         return targets
 
     def fit(self,
@@ -168,16 +166,16 @@ class AspectClassifier:
                                        sentence_len=batch.sentence_len)
                     sentence_len.append(batch.sentence_len.to('cpu'))
                     logits.append(logit.to('cpu'))
-                logits = th.cat(logits, dim=0)
-                sentence_len = th.cat(sentence_len, dim=0)
-                targets_pred = self.get_targets(logits=logits, sentence_len=sentence_len)
+                targets_pred = self.get_targets(logits=th.cat(logits, dim=0),
+                                                sentence_len=th.cat(sentence_len, dim=0))
                 min_params = scipy.optimize.fmin(func=lambda thresholds: self._targets_score(
-                    targets=[sentence.targets for sentence in train_sentences],
+                    targets=
+                    [sentence.targets for sentence in train_sentences if len(sentence)],
                     targets_pred=targets_pred,
                     thresholds=thresholds),
                                                  x0=self.thresholds)
-                self.thresholds = min_params[0]
-                logging.info(f'{min_params[1]}')
+                self.thresholds = min_params
+                logging.info(f'{min_params}')
 
                 progress_bar.update(1)
 
@@ -199,21 +197,23 @@ class AspectClassifier:
         """
         self.model.eval()
         sentences = copy.deepcopy(sentences)
+        not_empty_sentence_indexes = [
+            index for index, sentence in enumerate(sentences) if len(sentence)
+        ]
         batches = DataLoader(sentences=sentences,
                              batch_size=self.batch_size,
                              vocabulary=self.vocabulary,
                              device=self.device,
                              aspect_labels=self.aspect_labels)
         for batch_index, batch in enumerate(batches):
-            logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                             graph=batch.graph,
-                                             target_mask=batch.target_mask,
-                                             sentence_len=batch.sentence_len)
-            pred_labels = np.argmax(logits.data.numpy(), axis=1).tolist()
-            for item_index, item in enumerate(pred_labels):
-                sentence_index = batch.sentence_index[item_index]
-                target_index = batch.target_index[item_index]
-                sentences[sentence_index].targets[target_index].set_polarity(item)
+            logits = self.model(embed_ids=batch.embed_ids,
+                                graph=batch.graph,
+                                sentence_len=batch.sentence_len)
+            targets_pred = self.get_targets(logits=logits.to('cpu'),
+                                            sentence_len=batch.sentence_len.to('cpu'))
+
+            for sentence_index, targets in enumerate(targets_pred):
+                sentences[not_empty_sentence_indexes[sentence_index]].targets = targets
         return sentences
 
     def save_model(self):
@@ -233,9 +233,11 @@ class AspectClassifier:
         classifier.model.load_state_dict(model)
         return classifier
 
-    def _targets_score(self, targets: List[List[Target]], targets_pred: List[List[Target]],
-                       thresholds: None) -> float:
-        if thresholds:
+    def _targets_score(self,
+                       targets: List[List[Target]],
+                       targets_pred: List[List[Target]],
+                       thresholds=None) -> float:
+        if thresholds is not None:
             self.thresholds = thresholds
 
         total_targets = 0
@@ -251,6 +253,8 @@ class AspectClassifier:
             total_targets += len(targets[sentence_index])
             total_predictions += len(targets_pred[sentence_index])
 
+        if total_predictions == 0:
+            return 0.0
         precision = correct_predictions / total_targets
         recall = correct_predictions / total_predictions
         f1 = 2 * (precision * recall) / (precision + recall)
@@ -258,7 +262,6 @@ class AspectClassifier:
 
     @staticmethod
     def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]):
-        """Return F1 score"""
         total_targets = 0
         total_predictions = 0
         correct_predictions = 0
@@ -272,7 +275,9 @@ class AspectClassifier:
             total_targets += len(sentences[sentence_index].targets)
             total_predictions += len(sentences_pred[sentence_index].targets)
 
+        if total_predictions == 0:
+            return Score(precision=1.0, recall=0.0, f1=0.0)
         precision = correct_predictions / total_targets
         recall = correct_predictions / total_predictions
         f1 = 2 * (precision * recall) / (precision + recall)
-        return precision, recall, f1
+        return Score(precision=precision, recall=recall, f1=f1)
