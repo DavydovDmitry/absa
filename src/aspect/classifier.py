@@ -12,11 +12,11 @@ from gensim.models import KeyedVectors
 from frozendict import frozendict
 from tqdm import tqdm
 
-from src import SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM, aspect_classifier_dump_path
+from src import PROGRESSBAR_COLUMNS_NUM, aspect_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Target
 from .loader import DataLoader, Batch
-from .nn.classifier import NNWrap
+from .nn import NeuralNetwork
 from .labels import ASPECT_LABELS
 
 
@@ -41,11 +41,11 @@ class AspectClassifier:
                  emb_matrix: th.Tensor = ...,
                  batch_size=100,
                  aspect_labels=ASPECT_LABELS):
-        self.device = th.device('cpu')
-        #self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
+        # self.device = th.device('cpu')
+        self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
         self.aspect_labels = aspect_labels
-        num_labels = aspect_labels.shape[0]
+        self.num_labels = aspect_labels.shape[0]
 
         # prepare vocabulary and embeddings
         if isinstance(word2vec, KeyedVectors):
@@ -56,9 +56,9 @@ class AspectClassifier:
 
         while True:
             try:
-                self.model = NNWrap(emb_matrix=emb_matrix,
-                                    device=self.device,
-                                    num_class=num_labels)
+                self.model = NeuralNetwork(emb_matrix=emb_matrix,
+                                           device=self.device,
+                                           num_class=self.num_labels).to(self.device)
             except RuntimeError as e:
                 if 'out of memory' in str(e):
                     # todo: handle
@@ -70,7 +70,7 @@ class AspectClassifier:
                 break
 
         self.criterion = th.nn.BCEWithLogitsLoss()
-        self.thresholds = np.array([0.5] * num_labels)
+        self.thresholds = np.array([-3] * self.num_labels)
 
     def batch_metrics(self, batch: Batch):
         """Make a forward step and return metrics"""
@@ -86,14 +86,14 @@ class AspectClassifier:
     def get_targets(self, logits: th.Tensor, sentence_len: th.Tensor) -> List[List[Target]]:
         targets = []
         for l in th.split(logits, [x for x in sentence_len]):
-            targets.append(self.get_target(logits=l.view((-1, ))))
+            targets.append(self.get_target(logits=l.view((-1, self.num_labels))))
         return targets
 
     def get_target(self, logits: th.Tensor) -> List[Target]:
         targets = []
 
-        term_indexes = (logits > th.tensor(self.thresholds)).nonzero()
-        if term_indexes:
+        term_indexes = (logits > th.tensor(self.thresholds)).nonzero(as_tuple=False)
+        if term_indexes.size(0):
             # current target
             target_terms = []
             target_aspects_id = set()
@@ -161,14 +161,15 @@ class AspectClassifier:
                 # Optimal threshold
                 self.model.eval()
                 logits = []
+                sentence_len = []
                 for i, batch in enumerate(train_batches):
                     logit = self.model(embed_ids=batch.embed_ids,
                                        graph=batch.graph,
                                        sentence_len=batch.sentence_len)
-                    s_len = batch.sentence_len.to('cpu')
+                    sentence_len.append(batch.sentence_len.to('cpu'))
                     logits.append(logit.to('cpu'))
                 logits = th.cat(logits, dim=0)
-                sentence_len = th.cat(s_len, dim=0)
+                sentence_len = th.cat(sentence_len, dim=0)
                 targets_pred = self.get_targets(logits=logits, sentence_len=sentence_len)
                 min_params = scipy.optimize.fmin(func=lambda thresholds: self._targets_score(
                     targets=[sentence.targets for sentence in train_sentences],

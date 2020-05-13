@@ -8,7 +8,7 @@ import dgl
 from .tree_lstm import ChildSumTreeLSTMCell
 
 
-class LSTMNN(nn.Module):
+class StackLSTM(nn.Module):
     """Stack of Bi-LSTM and Tree-LSTM neural networks.
 
     First one run through sequence elements order. The last one run
@@ -22,7 +22,7 @@ class LSTMNN(nn.Module):
                  rnn_layers=1,
                  input_dropout=0.7,
                  rnn_dropout=0.1):
-        super(LSTMNN, self).__init__()
+        super(StackLSTM, self).__init__()
         self.device = device
 
         self.embed = nn.Embedding(*emb_matrix.shape)

@@ -80,11 +80,12 @@ class DataLoader:
         labels = th.zeros(size=(sentence_len, self.aspect_labels.shape[0]), dtype=th.float)
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
-                labels[:, np.where(self.aspect_labels == target.category)] = 1
+                labels[:, np.where(self.aspect_labels == target.category)] = 1.0
             else:
                 for word_index, word in enumerate(sentence.get_sentence_order()):
                     if word in target.nodes:
-                        labels[word_index, np.where(self.aspect_labels == target.category)] = 1
+                        labels[word_index,
+                               np.where(self.aspect_labels == target.category)] = 1.0
 
         return Batch(
             sentence_len=sentence_len,
@@ -125,11 +126,12 @@ class DataLoader:
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
+        labels = th.cat([item.labels for item in batch])
         return Batch(
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),
             graph=dgl.batch([item.graph for item in batch]),
-            labels=th.cat([item.labels for item in batch]).to(self.device),
+            labels=labels.to(self.device),
         )
 
     def __iter__(self) -> Batch:
