@@ -7,6 +7,7 @@ import numpy as np
 
 from src import UNKNOWN_WORD, PAD_WORD
 from src.review.parsed_sentence import ParsedSentence
+from .labels import Labels
 
 Batch = namedtuple(
     'Batch',
@@ -37,7 +38,7 @@ class DataLoader:
                  sentences: List[ParsedSentence],
                  batch_size: int,
                  device: th.device,
-                 aspect_labels: np.array,
+                 aspect_labels: Labels,
                  unknown_word=UNKNOWN_WORD,
                  pad_word=PAD_WORD):
         self.vocabulary = vocabulary
@@ -77,17 +78,17 @@ class DataLoader:
         graph = dgl.DGLGraph()
         graph.from_networkx(sentence.graph)
 
-        labels = th.zeros(size=(sentence_len, self.aspect_labels.shape[0]), dtype=th.float)
+        labels = th.LongTensor(len(self.aspect_labels)).fill_(
+            self.aspect_labels.get_index(self.aspect_labels.none_value))
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
                 continue
                 # todo:
-                labels[:, np.where(self.aspect_labels == target.category)] = 1.0
+                # labels[:, np.where(self.aspect_labels == target.category)] = 1.0
             else:
                 for word_index, word in enumerate(sentence.get_sentence_order()):
                     if word in target.nodes:
-                        labels[word_index,
-                               np.where(self.aspect_labels == target.category)] = 1.0
+                        labels[word_index] = self.aspect_labels.get_index(target.category)
 
         return Batch(
             sentence_len=sentence_len,
@@ -128,7 +129,7 @@ class DataLoader:
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
-        labels = th.cat([item.labels for item in batch])
+        labels = th.stack([item.labels for item in batch])
         return Batch(
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),

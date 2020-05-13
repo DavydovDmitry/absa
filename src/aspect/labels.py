@@ -1,4 +1,25 @@
+from typing import List
+
 import numpy as np
+
+
+class Labels:
+    def __init__(self, labels: List, none_value=None):
+        self.none_value = none_value
+        if none_value is not None:
+            self.labels = np.array(none_value + labels)
+        else:
+            self.labels = np.array(labels)
+
+    def get_index(self, label: str):
+        return np.where(self.labels, label)
+
+    def __getitem__(self, item):
+        return self.labels[item]
+
+    def __len__(self):
+        return self.labels.shape[0]
+
 
 POS_LABELS = [
     'ADJ',
@@ -28,9 +49,7 @@ DEP_LABELS = [
 ]
 DEP_LABELS = np.array(DEP_LABELS).reshape(-1, 1)
 
-# NONE_ASPECT_LABEL = 'NONE_ASPECT'
 ASPECT_LABELS = [
-    # NONE_ASPECT_LABEL,
     'SERVICE#GENERAL',
     'AMBIENCE#GENERAL',
     'FOOD#QUALITY',
