@@ -1,33 +1,6 @@
-from typing import List
-
 import numpy as np
 
-
-class Labels:
-    def __init__(self, labels: List, none_value=None):
-        self.none_value = none_value
-        if none_value is not None:
-            self.labels = np.array([none_value] + labels)
-        else:
-            self.labels = np.array(labels)
-
-    def get_index(self, label: str):
-        """
-        row index     column index
-         |   ___________|
-         |  |
-         v  v
-        [0][0]
-        """
-        return np.where(self.labels == label)[0][0]
-
-    def __getitem__(self, item):
-        return self.labels[item]
-
-    def __len__(self):
-        return self.labels.shape[0]
-
-
+# -------------------------- Part of Speech ------------------------------
 POS_LABELS = [
     'ADJ',
     'ADP',
@@ -49,6 +22,7 @@ POS_LABELS = [
 ]
 POS_LABELS = np.array(POS_LABELS).reshape(-1, 1)
 
+# ------------------------ Dependencies ----------------------------------
 DEP_LABELS = [
     'amod', 'root', 'nmod', 'obj', 'nsubj', 'case', 'det', 'obl', 'cc', 'conj', 'advmod',
     'iobj', 'xcomp', 'cop', 'nummod', 'mark', 'fixed', 'advcl', 'aux', 'acl', 'orphan',
@@ -56,6 +30,7 @@ DEP_LABELS = [
 ]
 DEP_LABELS = np.array(DEP_LABELS).reshape(-1, 1)
 
+# ------------------------------ Aspects ---------------------------------
 ASPECT_LABELS = [
     'SERVICE#GENERAL',
     'AMBIENCE#GENERAL',

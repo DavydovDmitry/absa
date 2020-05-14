@@ -9,9 +9,9 @@ import torch as th
 import numpy as np
 from gensim.models import KeyedVectors
 from frozendict import frozendict
-from sklearn.metrics import f1_score
+from scipy.optimize import minimize as minimize
 
-from src import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN
+from src import sentence_aspect_classifier_dump_path, SCORE_DECIMAL_LEN
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Target
 from .loader import DataLoader
@@ -41,7 +41,7 @@ class AspectClassifier:
                  batch_size=100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
-        self.aspect_labels = Labels(labels=aspect_labels, none_value='NONE_VALUE')
+        self.aspect_labels = Labels(labels=aspect_labels)
 
         # prepare vocabulary and embeddings
         if isinstance(word2vec, KeyedVectors):
@@ -61,9 +61,11 @@ class AspectClassifier:
             else:
                 break
 
+        criterion = th.nn.BCEWithLogitsLoss()
+        self.loss_func = lambda y_pred, y: criterion(y_pred, y)
+
     def fit(self,
             train_sentences: List[ParsedSentence],
-            val_sentences=None,
             optimizer_class=th.optim.Adam,
             optimizer_params=frozendict({
                 'lr': 0.01,
@@ -85,15 +87,6 @@ class AspectClassifier:
                                    vocabulary=self.vocabulary,
                                    aspect_labels=self.aspect_labels,
                                    device=self.device)
-        if val_sentences:
-            val_batches = DataLoader(sentences=val_sentences,
-                                     batch_size=self.batch_size,
-                                     vocabulary=self.vocabulary,
-                                     aspect_labels=self.aspect_labels,
-                                     device=self.device)
-            val_acc_history, val_loss_history, f1_history = [], [], []
-
-        train_acc_history, train_loss_history = [], []
 
         for epoch in range(num_epoch):
 
@@ -105,44 +98,56 @@ class AspectClassifier:
             for i, batch in enumerate(train_batches):
                 optimizer.zero_grad()
                 logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
-                loss = th.nn.functional.cross_entropy(logits, batch.labels, reduction='mean')
+                loss = self.loss_func(logits, batch.labels)
                 loss.backward()
                 optimizer.step()
 
                 train_loss += loss.data
+            train_loss = train_loss / train_len
 
-            # Validation
-            if val_sentences:
-                val_len = len(val_batches)
-                self.model.eval()
-                predictions, labels = [], []
-                val_loss, val_acc = 0., 0.
-                for i, batch in enumerate(val_batches):
-                    logits = self.model(embed_ids=batch.embed_ids,
-                                        sentence_len=batch.sentence_len)
-                    loss = th.nn.functional.cross_entropy(logits,
-                                                          batch.labels,
-                                                          reduction='mean')
-                    val_loss += loss.data
-                    predictions += np.argmax(logits.to('cpu').data.numpy(), axis=1).tolist()
-                    labels += batch.labels.to('cpu').data.numpy().tolist()
-                f1 = f1_score(labels, predictions, average='macro')
-
-                train_loss = train_loss / train_len
-                val_loss = val_loss / val_len
-
-                logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-                logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
-                logging.info(f'Validation ' + f'loss: {(val_loss):.{SCORE_DECIMAL_LEN}f}| ' +
-                             f'f1_score: {f1:.{SCORE_DECIMAL_LEN}f}')
-
-                val_loss_history.append(val_loss)
-                f1_history.append(f1)
-            train_loss_history.append(train_loss)
+            logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
+            logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
+            logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
 
         if save_state:
             self.save_model()
+
+    def select_threshold(self, sentences: List[ParsedSentence]):
+        def f1_score(threshold):
+            labels_pred = np.where(logits > threshold, 1, 0)
+            correct = labels[labels_pred.nonzero()].sum()
+            total_predictions = labels_pred.sum()
+            total_labels = labels.sum()
+
+            precision = correct / total_predictions
+            recall = correct / total_labels
+            f1 = 2 * (precision * recall) / (precision + recall)
+            # logging.info(f'{f1}: {threshold}')
+            return -f1
+
+        train_batches = DataLoader(sentences=sentences,
+                                   batch_size=self.batch_size,
+                                   vocabulary=self.vocabulary,
+                                   aspect_labels=self.aspect_labels,
+                                   device=self.device)
+
+        logits = []
+        labels = []
+        self.model.eval()
+        for i, batch in enumerate(train_batches):
+            logit = self.model(embed_ids=batch.embed_ids,
+                               sentence_len=batch.sentence_len).to('cpu').data.numpy()
+            label = batch.labels.to('cpu').data.numpy()
+            logits.append(logit)
+            labels.append(label)
+        logits = np.concatenate(logits)
+        labels = np.concatenate(labels)
+        x0 = np.random.random(len(self.aspect_labels)) - 1.0
+        opt_results = minimize(f1_score, x0=x0, options={
+            'adaptive': True,
+        })
+        logging.info(opt_results)
+        self.threshold = opt_results.x
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         """Modify passed sentences. Define every target polarity.
@@ -159,6 +164,8 @@ class AspectClassifier:
         """
         self.model.eval()
         sentences = copy.deepcopy(sentences)
+        for sentence in sentences:
+            sentence.reset_targets()
 
         batches = DataLoader(sentences=sentences,
                              batch_size=self.batch_size,
@@ -167,62 +174,21 @@ class AspectClassifier:
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
-            pred_labels = th.argmax(logits.to('cpu'), dim=1)
             pred_sentences_targets = self._get_targets(
-                labels_indexes=pred_labels,
-                sentence_len=[x.item() for x in batch.sentence_len.to('cpu')])
+                labels_indexes=logits.to('cpu').data.numpy())
             for internal_index, targets in enumerate(pred_sentences_targets):
                 sentence_index = batch.sentence_index[internal_index]
-                sentence_nodes = sentences[sentence_index].get_sentence_order()
-
-                explicit_targets = []
-                explicit_categories = set()
-                for target in targets:
-                    target.nodes = [sentence_nodes[x] for x in target.nodes]
-                    explicit_targets.append(target)
-                    explicit_categories.add(target.category)
-                for target in sentences[sentence_index].targets:
-                    if (not target.nodes) and (target.category in explicit_categories):
-                        sentences[sentence_index].targets.remove(target)
-
-                # todo: rm implicit
-                sentences[sentence_index].targets.extend(explicit_targets)
+                sentences[sentence_index].targets = targets
         return sentences
 
-    def _get_targets(self, labels_indexes: th.Tensor,
-                     sentence_len: List[int]) -> List[List[Target]]:
+    def _get_targets(self, labels_indexes: np.array) -> List[List[Target]]:
         targets = []
-        for indexes in th.split(labels_indexes, sentence_len):
-            targets.append(self._get_target(indexes.data.numpy()))
-        return targets
-
-    def _get_target(self, labels_indexes: np.array) -> List[Target]:
-        targets = []
-
-        words_indexes = [
-            x[0] for x in np.argwhere(
-                labels_indexes != self.aspect_labels.get_index(self.aspect_labels.none_value))
-        ]
-        if words_indexes:
-            target_words = [words_indexes[0]]
-            target_label_index = labels_indexes[target_words[0]]
-
-            for word_index in words_indexes:
-                label_index = labels_indexes[word_index]
-                if (word_index - target_words[-1] == 1) and (label_index
-                                                             == target_label_index):
-                    target_words.append(word_index)
-                else:
-                    targets.append(
-                        Target(nodes=target_words,
-                               category=self.aspect_labels[target_label_index]))
-                    target_words = [word_index]
-                    target_label_index = label_index
-            if target_words:  # always
-                targets.append(
-                    Target(nodes=target_words,
-                           category=self.aspect_labels[target_label_index]))
-
+        for sentence_labels in labels_indexes:
+            sentence_targets = []
+            labels = [x[0] for x in np.argwhere(sentence_labels > self.threshold)]
+            for label in labels:
+                sentence_targets.append(Target(nodes=[], category=self.aspect_labels[label]))
+            targets.append(sentence_targets)
         return targets
 
     def save_model(self):
@@ -230,12 +196,12 @@ class AspectClassifier:
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
-        }, target_aspect_classifier_dump_path)
+        }, sentence_aspect_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'AspectClassifier':
         """Load pretrained model."""
-        checkpoint = th.load(target_aspect_classifier_dump_path)
+        checkpoint = th.load(sentence_aspect_classifier_dump_path)
         model = checkpoint['model']
         classifier = AspectClassifier(vocabulary=checkpoint['vocabulary'],
                                       emb_matrix=model['nn.embed.weight'])
@@ -244,26 +210,24 @@ class AspectClassifier:
 
     @staticmethod
     def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]):
-        total_targets = 0
+        total_labels = 0
         total_predictions = 0
         correct_predictions = 0
 
         for sentence_index in range(len(sentences)):
-            for y in sentences[sentence_index].targets:
-                for y_pred in sentences_pred[sentence_index].targets:
-                    if (y.nodes == y_pred.nodes) and (y.category == y_pred.category):
-                        correct_predictions += 1
-                        break
-            # total_targets += len([t for t in sentences[sentence_index].targets if t.nodes])
-            total_targets += len(sentences[sentence_index].targets)
-            total_predictions += len(sentences_pred[sentence_index].targets)
+            categories = set([t.category for t in sentences[sentence_index].targets])
+            pred_categories = set([t.category for t in sentences_pred[sentence_index].targets])
+
+            correct_predictions += len(categories.intersection(pred_categories))
+            total_labels += len(categories)
+            total_predictions += len(pred_categories)
 
         if total_predictions == 0:
             return Score(precision=1.0, recall=0.0, f1=0.0)
         if correct_predictions == 0:
             return Score(precision=0.0, recall=0.0, f1=0.0)
-        precision = correct_predictions / total_targets
-        recall = correct_predictions / total_predictions
+        precision = correct_predictions / total_predictions
+        recall = correct_predictions / total_labels
         f1 = 2 * (precision * recall) / (precision + recall)
         return Score(precision=precision, recall=recall, f1=f1)
 
