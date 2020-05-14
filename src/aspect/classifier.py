@@ -57,13 +57,9 @@ class AspectClassifier:
             try:
                 self.model = NeuralNetwork(emb_matrix=emb_matrix,
                                            device=self.device,
-                                           num_class=len(self.aspect_labels))
+                                           num_class=len(self.aspect_labels)).to(self.device)
             except RuntimeError as e:
                 if 'out of memory' in str(e):
-                    # todo: handle
-                    # for p in self.model.parameters():
-                    #     if p.grad is not None:
-                    #         del p.grad
                     th.cuda.empty_cache()
             else:
                 break
@@ -85,6 +81,7 @@ class AspectClassifier:
             logging.info(
                 f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
             )
+
         optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
@@ -103,6 +100,7 @@ class AspectClassifier:
         train_acc_history, train_loss_history = [], []
 
         for epoch in range(num_epoch):
+
             # Train
             start_time = time.process_time()
             train_len = len(train_batches)
@@ -133,32 +131,25 @@ class AspectClassifier:
                                                           batch.labels,
                                                           reduction='mean')
                     val_loss += loss.data
-                    predictions += np.argmax(logits.data.numpy(), axis=1).tolist()
-                    labels += batch.polarity.data.numpy().tolist()
+                    predictions += np.argmax(logits.to('cpu').data.numpy(), axis=1).tolist()
+                    labels += batch.labels.to('cpu').data.numpy().tolist()
                 f1 = f1_score(labels, predictions, average='macro')
 
                 train_loss = train_loss / train_len
                 val_loss = val_loss / val_len
+
+                logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
+                logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
+                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
+                logging.info(f'Validation ' + f'loss: {(val_loss):.{SCORE_DECIMAL_LEN}f}| ' +
+                             f'f1_score: {f1:.{SCORE_DECIMAL_LEN}f}')
+
                 val_loss_history.append(val_loss)
                 f1_history.append(f1)
-
-                if verbose:
-                    logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-                    logging.info(
-                        f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-                    logging.info(f'Train      ' +
-                                 f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
-                    logging.info(f'Validation ' +
-                                 f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
-                                 f'f1_score: {f1:.{SCORE_DECIMAL_LEN}f}')
-
-            train_acc_history.append(train_acc)
             train_loss_history.append(train_loss)
 
         if save_state:
             self.save_model()
-        if val_sentences:
-            return f1_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         """Modify passed sentences. Define every target polarity.
@@ -186,30 +177,34 @@ class AspectClassifier:
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids,
                                 graph=batch.graph,
-                                target_mask=batch.target_mask,
                                 sentence_len=batch.sentence_len)
-            pred_labels = np.argmax(logits.data.numpy(), axis=1)
-            pred_sentences_targets = self._get_targets(pred_labels)
-            for sentence_index, targets in enumerate(pred_sentences_targets):
+            pred_labels = th.argmax(logits.to('cpu'), dim=1)
+            pred_sentences_targets = self._get_targets(
+                labels_indexes=pred_labels,
+                sentence_len=[x.item() for x in batch.sentence_len.to('cpu')])
+            for internal_index, targets in enumerate(pred_sentences_targets):
+                sentence_index = batch.sentence_index[internal_index]
                 sentence_nodes = sentences[sentence_index].get_sentence_order()
                 for target in targets:
                     target.nodes = [sentence_nodes[x] for x in target.nodes]
                     sentences[sentence_index].targets.append(target)
         return sentences
 
-    def _get_targets(self, labels_indexes: np.array) -> List[List[Target]]:
+    def _get_targets(self, labels_indexes: th.Tensor,
+                     sentence_len: List[int]) -> List[List[Target]]:
         targets = []
-        for indexes in labels_indexes:
-            targets.append(self._get_target(indexes))
+        for indexes in th.split(labels_indexes, sentence_len):
+            targets.append(self._get_target(indexes.data.numpy()))
         return targets
 
     def _get_target(self, labels_indexes: np.array) -> List[Target]:
         targets = []
 
         words_indexes = [
-            x for x in (labels_indexes != self.aspect_labels.none_value).nonzero()
+            x[0] for x in np.argwhere(
+                labels_indexes != self.aspect_labels.get_index(self.aspect_labels.none_value))
         ]
-        if not words_indexes:
+        if words_indexes:
             target_words = [words_indexes[0]]
             target_label_index = labels_indexes[target_words[0]]
 
@@ -224,6 +219,10 @@ class AspectClassifier:
                                category=self.aspect_labels[target_label_index]))
                     target_words = [word_index]
                     target_label_index = label_index
+            if target_words:  # always
+                targets.append(
+                    Target(nodes=target_words,
+                           category=self.aspect_labels[target_label_index]))
 
         return targets
 
@@ -256,6 +255,7 @@ class AspectClassifier:
                     if (y.nodes == y_pred.nodes) and (y.category == y_pred.category):
                         correct_predictions += 1
                         break
+            # total_targets += len([t for t in sentences[sentence_index].targets if t.nodes])
             total_targets += len(sentences[sentence_index].targets)
             total_predictions += len(sentences_pred[sentence_index].targets)
 

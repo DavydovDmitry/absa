@@ -35,10 +35,8 @@ class NeuralNetwork(nn.Module):
 
         Return
         -------
-        logits : th.Tensor
-            For every class.
-        outputs : th.Tensor
-            Hidden state (encoding) for every target.
+        logits : th.Tensor(device=self.device)
+            For every class
         """
         h = self.nn(embed_ids=embed_ids, graph=graph, sentence_len=sentence_len)
         logits = self.linear(h)

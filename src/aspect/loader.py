@@ -12,6 +12,7 @@ from .labels import Labels
 Batch = namedtuple(
     'Batch',
     [
+        'sentence_index',
         # GPU part. This fields will be passed to GPU.
         'sentence_len',
         'embed_ids',
@@ -78,7 +79,7 @@ class DataLoader:
         graph = dgl.DGLGraph()
         graph.from_networkx(sentence.graph)
 
-        labels = th.LongTensor(len(self.aspect_labels)).fill_(
+        labels = th.LongTensor(sentence_len).fill_(
             self.aspect_labels.get_index(self.aspect_labels.none_value))
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
@@ -91,6 +92,7 @@ class DataLoader:
                         labels[word_index] = self.aspect_labels.get_index(target.category)
 
         return Batch(
+            sentence_index=sentence_index,
             sentence_len=sentence_len,
             embed_ids=embed_ids,
             graph=graph,
@@ -123,14 +125,16 @@ class DataLoader:
         max_len = max([x.sentence_len for x in batch])
         batch = sort_by_sentence_len(batch=batch)
 
+        sentence_index = np.array([x.sentence_index for x in batch])
         sentence_lens = th.LongTensor([x.sentence_len for x in batch])
 
         embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[self.pad_word])
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
-        labels = th.stack([item.labels for item in batch])
+        labels = th.cat([item.labels for item in batch])
         return Batch(
+            sentence_index=sentence_index,
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),
             graph=dgl.batch([item.graph for item in batch]),
