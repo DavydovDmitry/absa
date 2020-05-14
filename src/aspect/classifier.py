@@ -1,25 +1,21 @@
 from typing import List, Dict
 import logging
-import sys
 import time
 import copy
 from functools import reduce
-from itertools import chain
 from dataclasses import dataclass
 
-import scipy
 import torch as th
 import numpy as np
 from gensim.models import KeyedVectors
 from frozendict import frozendict
-from tqdm import tqdm
 from sklearn.metrics import f1_score
 
-from src import PROGRESSBAR_COLUMNS_NUM, aspect_classifier_dump_path, SCORE_DECIMAL_LEN
+from src import aspect_classifier_dump_path, SCORE_DECIMAL_LEN
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Target
-from .loader import DataLoader, Batch
-from .nn import NeuralNetwork
+from .loader import DataLoader
+from .nn.nn import NeuralNetwork
 from .labels import ASPECT_LABELS, Labels
 
 
@@ -67,19 +63,18 @@ class AspectClassifier:
     def fit(self,
             train_sentences: List[ParsedSentence],
             val_sentences=None,
-            optimizer_class=th.optim.Adamax,
+            optimizer_class=th.optim.Adam,
             optimizer_params=frozendict({
                 'lr': 0.01,
-                'weight_decay': 0,
             }),
-            num_epoch=30,
+            num_epoch=50,
             verbose=True,
             save_state=True):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         if verbose:
             logging.info(
-                f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
+                f'Number of trainable parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
             )
 
         optimizer = optimizer_class(parameters, **optimizer_params)
@@ -108,9 +103,7 @@ class AspectClassifier:
             train_loss, train_acc = 0., 0.
             for i, batch in enumerate(train_batches):
                 optimizer.zero_grad()
-                logits = self.model(embed_ids=batch.embed_ids,
-                                    graph=batch.graph,
-                                    sentence_len=batch.sentence_len)
+                logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
                 loss = th.nn.functional.cross_entropy(logits, batch.labels, reduction='mean')
                 loss.backward()
                 optimizer.step()
@@ -125,7 +118,6 @@ class AspectClassifier:
                 val_loss, val_acc = 0., 0.
                 for i, batch in enumerate(val_batches):
                     logits = self.model(embed_ids=batch.embed_ids,
-                                        graph=batch.graph,
                                         sentence_len=batch.sentence_len)
                     loss = th.nn.functional.cross_entropy(logits,
                                                           batch.labels,
@@ -175,9 +167,7 @@ class AspectClassifier:
                              aspect_labels=self.aspect_labels,
                              device=self.device)
         for batch_index, batch in enumerate(batches):
-            logits = self.model(embed_ids=batch.embed_ids,
-                                graph=batch.graph,
-                                sentence_len=batch.sentence_len)
+            logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
             pred_labels = th.argmax(logits.to('cpu'), dim=1)
             pred_sentences_targets = self._get_targets(
                 labels_indexes=pred_labels,

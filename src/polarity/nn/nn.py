@@ -4,7 +4,7 @@ import torch as th
 import torch.nn as nn
 import dgl
 
-from src.lstm.stack_lstm import StackLSTM
+from src.polarity.nn.stack_lstm import StackLSTM
 
 
 class TargetClassifier(nn.Module):

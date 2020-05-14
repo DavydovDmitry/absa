@@ -2,7 +2,6 @@ from typing import List, Dict
 from collections import namedtuple
 
 import torch as th
-import dgl
 import numpy as np
 
 from src import UNKNOWN_WORD, PAD_WORD
@@ -16,7 +15,6 @@ Batch = namedtuple(
         # GPU part. This fields will be passed to GPU.
         'sentence_len',
         'embed_ids',
-        'graph',
         # CPU part,
         'labels'
     ])
@@ -76,9 +74,6 @@ class DataLoader:
 
         sentence_len = len(sentence.graph.nodes)
 
-        graph = dgl.DGLGraph()
-        graph.from_networkx(sentence.graph)
-
         labels = th.LongTensor(sentence_len).fill_(
             self.aspect_labels.get_index(self.aspect_labels.none_value))
         for target_index, target in enumerate(sentence.targets):
@@ -95,7 +90,6 @@ class DataLoader:
             sentence_index=sentence_index,
             sentence_len=sentence_len,
             embed_ids=embed_ids,
-            graph=graph,
             labels=labels,
         )
 
@@ -137,7 +131,6 @@ class DataLoader:
             sentence_index=sentence_index,
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),
-            graph=dgl.batch([item.graph for item in batch]),
             labels=labels.to(self.device),
         )
 

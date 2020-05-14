@@ -15,7 +15,7 @@ from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
-from src.polarity.nn import TargetClassifier
+from src.polarity.nn.nn import TargetClassifier
 
 
 class PolarityClassifier:
