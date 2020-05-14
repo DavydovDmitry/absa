@@ -30,8 +30,8 @@ from src import TEST_APPENDIX, log_path
 from src.preprocess.dep_parse import load_parsed_reviews
 from src import parsed_reviews_dump_path
 from src.utils.embedding import get_embeddings
-from src.aspect.classifier import AspectClassifier
-from src.polarity.classifier import PolarityClassifier
+from src.target.aspect.classifier import AspectClassifier
+from src.target.polarity.classifier import PolarityClassifier
 from src.review.parsed_sentence import ParsedSentence
 
 SEED = 42
@@ -60,7 +60,7 @@ def configure_logging():
 
 
 def aspect_classification(train_sentences: List[ParsedSentence],
-                          test_sentences: List[ParsedSentence]):
+                          test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
     # classifier = AspectClassifier.load_model()
     classifier = AspectClassifier(word2vec=word2vec)
     classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
@@ -70,23 +70,27 @@ def aspect_classification(train_sentences: List[ParsedSentence],
         sentence.reset_targets()
 
     test_sentences_pred = classifier.predict(test_sentences_pred)
-    print(classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred))
+    logging.info(
+        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
+    )
     return test_sentences_pred
 
 
 def polarity_classification(train_sentences: List[ParsedSentence],
-                            test_sentences: List[ParsedSentence]):
+                            test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
     # classifier = PolarityClassifier.load_model()
     classifier = PolarityClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences=train_sentences)
+    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
 
     test_sentences_pred = copy.deepcopy(test_sentences)
     for sentence in test_sentences_pred:
         sentence.reset_targets_polarities()
 
     test_sentences_pred = classifier.predict(test_sentences_pred)
-    # todo: score
-    print(classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred))
+    logging.info(
+        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
+    )
+    return test_sentences_pred
 
 
 if __name__ == "__main__":
@@ -106,5 +110,5 @@ if __name__ == "__main__":
     test_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path + TEST_APPENDIX)
     test_sentences = [x for x in reduce(lambda x, y: x + y, test_reviews)]
 
-    aspect_classification(train_sentences=train_sentences, test_sentences=test_sentences)
-    # polarity_classification(train_sentences=train_sentences, test_sentences=test_sentences)
+    # aspect_classification(train_sentences=train_sentences, test_sentences=test_sentences)
+    polarity_classification(train_sentences=train_sentences, test_sentences=test_sentences)

@@ -15,7 +15,7 @@ from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
-from src.polarity.nn.nn import TargetClassifier
+from .nn.nn import NeurelNetwork
 
 
 class PolarityClassifier:
@@ -48,9 +48,9 @@ class PolarityClassifier:
 
         while True:
             try:
-                self.model = TargetClassifier(emb_matrix=emb_matrix,
-                                              device=self.device,
-                                              num_class=len(Polarity))
+                self.model = NeurelNetwork(emb_matrix=emb_matrix,
+                                           device=self.device,
+                                           num_class=len(Polarity))
             except RuntimeError as e:
                 if 'out of memory' in str(e):
                     # todo: handle
@@ -210,3 +210,40 @@ class PolarityClassifier:
                                         emb_matrix=model['nn.embed.weight'])
         classifier.model.load_state_dict(model)
         return classifier
+
+    @staticmethod
+    def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]) -> float:
+        """
+            Check targets polarity.
+        """
+        correct_predictions = 0
+        total_predictions = 0
+
+        for s_index, (s, s_pred) in enumerate(zip(sentences, sentences_pred)):
+            if len(s.targets) != len(s_pred.targets) or len(
+                    set(hash(t) for t in s.targets) & (set(hash(t)
+                                                           for t in s_pred.targets))) != len(
+                                                               s.targets):
+                print(len(set(s.targets).intersection(set(s_pred.targets))))
+
+                logging.error('-' * 50 + ' Original  targets ' + '-' * 50)
+                for l_target in s.targets:
+                    logging.error(l_target)
+                logging.error('-' * 50 + ' Predicted targets ' + '-' * 50)
+                for l_target_pred in s_pred.targets:
+                    logging.error(l_target_pred)
+                raise ValueError(f'Targets mismatch in {s_index} sentence.')
+
+            for target in s.targets:
+                for target_pred in s_pred.targets:
+                    if (target.nodes == target_pred.nodes) and (target.category
+                                                                == target_pred.category):
+                        if target.polarity == target_pred.polarity:
+                            correct_predictions += 1
+                        total_predictions += 1
+                        break
+                else:
+                    raise ValueError
+
+        accuracy = correct_predictions / total_predictions
+        return accuracy

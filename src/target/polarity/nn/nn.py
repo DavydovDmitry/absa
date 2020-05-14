@@ -4,10 +4,10 @@ import torch as th
 import torch.nn as nn
 import dgl
 
-from src.polarity.nn.stack_lstm import StackLSTM
+from .stack_lstm import StackLSTM
 
 
-class TargetClassifier(nn.Module):
+class NeurelNetwork(nn.Module):
     """Targets polarity classifier
 
     Essential stages:

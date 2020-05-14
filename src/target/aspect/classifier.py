@@ -20,7 +20,7 @@ from .labels import ASPECT_LABELS, Labels
 
 
 class AspectClassifier:
-    """Polarity classifier
+    """Aspect classifier
 
     Attributes
     ----------
