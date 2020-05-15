@@ -11,7 +11,7 @@ from sklearn import metrics
 from gensim.models import KeyedVectors
 from frozendict import frozendict
 
-from src import SCORE_DECIMAL_LEN, polarity_classifier_dump_path
+from src import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Polarity
 from .loader import DataLoader, Batch
@@ -199,12 +199,12 @@ class PolarityClassifier:
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
-        }, polarity_classifier_dump_path)
+        }, target_polarity_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'PolarityClassifier':
         """Load pretrained model."""
-        checkpoint = th.load(polarity_classifier_dump_path)
+        checkpoint = th.load(target_polarity_classifier_dump_path)
         model = checkpoint['model']
         classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],
                                         emb_matrix=model['nn.embed.weight'])

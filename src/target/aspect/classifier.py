@@ -11,12 +11,13 @@ from gensim.models import KeyedVectors
 from frozendict import frozendict
 from sklearn.metrics import f1_score
 
-from src import aspect_classifier_dump_path, SCORE_DECIMAL_LEN
+from src import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Target
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
-from .labels import ASPECT_LABELS, Labels
+from src.labels.labels import Labels
+from src.labels.default import ASPECT_LABELS
 
 
 class AspectClassifier:
@@ -68,14 +69,10 @@ class AspectClassifier:
                 'lr': 0.01,
             }),
             num_epoch=50,
-            verbose=True,
+            verbose=False,
             save_state=True):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if verbose:
-            logging.info(
-                f'Number of trainable parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
-            )
 
         optimizer = optimizer_class(parameters, **optimizer_params)
 
@@ -90,9 +87,8 @@ class AspectClassifier:
                                      vocabulary=self.vocabulary,
                                      aspect_labels=self.aspect_labels,
                                      device=self.device)
-            val_acc_history, val_loss_history, f1_history = [], [], []
-
-        train_acc_history, train_loss_history = [], []
+            val_loss_history, val_f1_history = [], []
+        train_f1_history, train_loss_history = [], []
 
         for epoch in range(num_epoch):
 
@@ -100,6 +96,7 @@ class AspectClassifier:
             start_time = time.process_time()
             train_len = len(train_batches)
             self.model.train()
+            train_predictions, train_labels = [], []
             train_loss, train_acc = 0., 0.
             for i, batch in enumerate(train_batches):
                 optimizer.zero_grad()
@@ -108,13 +105,17 @@ class AspectClassifier:
                 loss.backward()
                 optimizer.step()
 
+                train_predictions += np.argmax(logits.to('cpu').data.numpy(), axis=1).tolist()
+                train_labels += batch.labels.to('cpu').data.numpy().tolist()
                 train_loss += loss.data
+            train_f1 = f1_score(train_predictions, train_labels, average='macro')
+            train_f1_history.append(train_f1)
 
             # Validation
             if val_sentences:
                 val_len = len(val_batches)
                 self.model.eval()
-                predictions, labels = [], []
+                val_predictions, val_labels = [], []
                 val_loss, val_acc = 0., 0.
                 for i, batch in enumerate(val_batches):
                     logits = self.model(embed_ids=batch.embed_ids,
@@ -123,25 +124,30 @@ class AspectClassifier:
                                                           batch.labels,
                                                           reduction='mean')
                     val_loss += loss.data
-                    predictions += np.argmax(logits.to('cpu').data.numpy(), axis=1).tolist()
-                    labels += batch.labels.to('cpu').data.numpy().tolist()
-                f1 = f1_score(labels, predictions, average='macro')
+                    val_predictions += np.argmax(logits.to('cpu').data.numpy(),
+                                                 axis=1).tolist()
+                    val_labels += batch.labels.to('cpu').data.numpy().tolist()
+                val_f1 = f1_score(val_labels, val_predictions, average='macro')
 
                 train_loss = train_loss / train_len
                 val_loss = val_loss / val_len
 
                 logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
                 logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
+                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
+                             f'f1_score: {train_f1:.{SCORE_DECIMAL_LEN}f}')
                 logging.info(f'Validation ' + f'loss: {(val_loss):.{SCORE_DECIMAL_LEN}f}| ' +
-                             f'f1_score: {f1:.{SCORE_DECIMAL_LEN}f}')
+                             f'f1_score: {val_f1:.{SCORE_DECIMAL_LEN}f}')
 
                 val_loss_history.append(val_loss)
-                f1_history.append(f1)
+                val_f1_history.append(val_f1)
             train_loss_history.append(train_loss)
 
         if save_state:
             self.save_model()
+        if val_sentences:
+            return train_f1_history, val_f1_history
+        return train_f1_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         """Modify passed sentences. Define every target polarity.
@@ -158,8 +164,6 @@ class AspectClassifier:
         """
         self.model.eval()
         sentences = copy.deepcopy(sentences)
-        for sentence in sentences:
-            sentence.reset_targets()
 
         batches = DataLoader(sentences=sentences,
                              batch_size=self.batch_size,
@@ -175,9 +179,17 @@ class AspectClassifier:
             for internal_index, targets in enumerate(pred_sentences_targets):
                 sentence_index = batch.sentence_index[internal_index]
                 sentence_nodes = sentences[sentence_index].get_sentence_order()
+
+                explicit_targets = []
+                explicit_categories = set()
                 for target in targets:
                     target.nodes = [sentence_nodes[x] for x in target.nodes]
-                    sentences[sentence_index].targets.append(target)
+                    explicit_targets.append(target)
+                    explicit_categories.add(target.category)
+                for target in sentences[sentence_index].targets:
+                    if (not target.nodes) and (target.category in explicit_categories):
+                        sentences[sentence_index].targets.remove(target)
+                sentences[sentence_index].targets.extend(explicit_targets)
         return sentences
 
     def _get_targets(self, labels_indexes: th.Tensor,
@@ -221,12 +233,12 @@ class AspectClassifier:
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
-        }, aspect_classifier_dump_path)
+        }, target_aspect_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'AspectClassifier':
         """Load pretrained model."""
-        checkpoint = th.load(aspect_classifier_dump_path)
+        checkpoint = th.load(target_aspect_classifier_dump_path)
         model = checkpoint['model']
         classifier = AspectClassifier(vocabulary=checkpoint['vocabulary'],
                                       emb_matrix=model['nn.embed.weight'])

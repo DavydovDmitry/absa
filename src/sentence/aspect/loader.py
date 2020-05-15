@@ -74,17 +74,9 @@ class DataLoader:
 
         sentence_len = len(sentence.graph.nodes)
 
-        labels = th.LongTensor(sentence_len).fill_(
-            self.aspect_labels.get_index(self.aspect_labels.none_value))
+        labels = th.FloatTensor(len(self.aspect_labels)).fill_(0.0)
         for target_index, target in enumerate(sentence.targets):
-            if not target.nodes:
-                continue
-                # todo:
-                # labels[:, np.where(self.aspect_labels == target.category)] = 1.0
-            else:
-                for word_index, word in enumerate(sentence.get_sentence_order()):
-                    if word in target.nodes:
-                        labels[word_index] = self.aspect_labels.get_index(target.category)
+            labels[self.aspect_labels.get_index(target.category)] = 1.0
 
         return Batch(
             sentence_index=sentence_index,
@@ -119,16 +111,15 @@ class DataLoader:
         max_len = max([x.sentence_len for x in batch])
         batch = sort_by_sentence_len(batch=batch)
 
-        sentence_index = np.array([x.sentence_index for x in batch])
         sentence_lens = th.LongTensor([x.sentence_len for x in batch])
 
         embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[self.pad_word])
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
-        labels = th.cat([item.labels for item in batch])
+        labels = th.stack([item.labels for item in batch])
         return Batch(
-            sentence_index=sentence_index,
+            sentence_index=th.LongTensor([x.sentence_index for x in batch]),
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),
             labels=labels.to(self.device),
