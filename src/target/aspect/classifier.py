@@ -69,14 +69,10 @@ class AspectClassifier:
                 'lr': 0.01,
             }),
             num_epoch=50,
-            verbose=True,
+            verbose=False,
             save_state=True):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if verbose:
-            logging.info(
-                f'Number of trainable parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
-            )
 
         optimizer = optimizer_class(parameters, **optimizer_params)
 
@@ -100,8 +96,7 @@ class AspectClassifier:
             start_time = time.process_time()
             train_len = len(train_batches)
             self.model.train()
-            train_predictions = []
-            train_labels = []
+            train_predictions, train_labels = [], []
             train_loss, train_acc = 0., 0.
             for i, batch in enumerate(train_batches):
                 optimizer.zero_grad()
