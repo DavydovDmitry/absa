@@ -42,11 +42,11 @@ This is pipeline for aspect-based sentiment analysis. Essential stages::
 Execution
 ----------
 
-Just execute `source.py` to run full pipeline:
+Just execute `run_pipeline.py` to run full pipeline:
 
 .. code-block:: bash
 
-    python source.py
+    python run_pipeline.py
 
 ----------
 Setup
