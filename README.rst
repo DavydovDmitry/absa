@@ -85,7 +85,7 @@ Or run by yourself:
 
 Take a look at `RusVectōrēs <https://rusvectores.org/ru/models/>`_ for
 another pretrained embeddings. In this case don't forget to replace filename
-in `src/__init__.py <https://gitlab.com/davydovdmitry/diploma-research/-/blob/master/absa/__init__.py>`_
+in `absa/__init__.py <https://gitlab.com/davydovdmitry/diploma-research/-/blob/master/absa/__init__.py>`_
 
 
 * Download dataset
