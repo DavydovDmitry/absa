@@ -63,10 +63,9 @@ def configure_logging():
 def sentence_aspect_classification(
         train_sentences: List[ParsedSentence],
         test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
-    classifier = SentenceAspectClassifier.load_model()
-    # classifier = SentenceAspectClassifier(word2vec=word2vec)
-    # classifier.fit(train_sentences=train_sentences)
-    classifier.select_threshold(train_sentences)
+    # classifier = SentenceAspectClassifier.load_model()
+    classifier = SentenceAspectClassifier(word2vec=word2vec)
+    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
 
     test_sentences_pred = copy.deepcopy(test_sentences)
     for sentence in test_sentences_pred:

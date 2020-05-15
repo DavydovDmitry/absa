@@ -91,9 +91,8 @@ class AspectClassifier:
                                      vocabulary=self.vocabulary,
                                      aspect_labels=self.aspect_labels,
                                      device=self.device)
-            val_acc_history, val_loss_history, f1_history = [], [], []
-
-        train_acc_history, train_loss_history = [], []
+            val_loss_history, val_f1_history = [], []
+        train_f1_history, train_loss_history = [], []
 
         for epoch in range(num_epoch):
 
@@ -101,6 +100,8 @@ class AspectClassifier:
             start_time = time.process_time()
             train_len = len(train_batches)
             self.model.train()
+            train_predictions = []
+            train_labels = []
             train_loss, train_acc = 0., 0.
             for i, batch in enumerate(train_batches):
                 optimizer.zero_grad()
@@ -109,13 +110,17 @@ class AspectClassifier:
                 loss.backward()
                 optimizer.step()
 
+                train_predictions += np.argmax(logits.to('cpu').data.numpy(), axis=1).tolist()
+                train_labels += batch.labels.to('cpu').data.numpy().tolist()
                 train_loss += loss.data
+            train_f1 = f1_score(train_predictions, train_labels, average='macro')
+            train_f1_history.append(train_f1)
 
             # Validation
             if val_sentences:
                 val_len = len(val_batches)
                 self.model.eval()
-                predictions, labels = [], []
+                val_predictions, val_labels = [], []
                 val_loss, val_acc = 0., 0.
                 for i, batch in enumerate(val_batches):
                     logits = self.model(embed_ids=batch.embed_ids,
@@ -124,25 +129,30 @@ class AspectClassifier:
                                                           batch.labels,
                                                           reduction='mean')
                     val_loss += loss.data
-                    predictions += np.argmax(logits.to('cpu').data.numpy(), axis=1).tolist()
-                    labels += batch.labels.to('cpu').data.numpy().tolist()
-                f1 = f1_score(labels, predictions, average='macro')
+                    val_predictions += np.argmax(logits.to('cpu').data.numpy(),
+                                                 axis=1).tolist()
+                    val_labels += batch.labels.to('cpu').data.numpy().tolist()
+                val_f1 = f1_score(val_labels, val_predictions, average='macro')
 
                 train_loss = train_loss / train_len
                 val_loss = val_loss / val_len
 
                 logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
                 logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
+                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
+                             f'f1_score: {train_f1:.{SCORE_DECIMAL_LEN}f}')
                 logging.info(f'Validation ' + f'loss: {(val_loss):.{SCORE_DECIMAL_LEN}f}| ' +
-                             f'f1_score: {f1:.{SCORE_DECIMAL_LEN}f}')
+                             f'f1_score: {val_f1:.{SCORE_DECIMAL_LEN}f}')
 
                 val_loss_history.append(val_loss)
-                f1_history.append(f1)
+                val_f1_history.append(val_f1)
             train_loss_history.append(train_loss)
 
         if save_state:
             self.save_model()
+        if val_sentences:
+            return train_f1_history, val_f1_history
+        return train_f1_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         """Modify passed sentences. Define every target polarity.
@@ -184,8 +194,6 @@ class AspectClassifier:
                 for target in sentences[sentence_index].targets:
                     if (not target.nodes) and (target.category in explicit_categories):
                         sentences[sentence_index].targets.remove(target)
-
-                # todo: rm implicit
                 sentences[sentence_index].targets.extend(explicit_targets)
         return sentences
 

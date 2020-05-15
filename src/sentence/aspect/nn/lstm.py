@@ -54,6 +54,6 @@ class LSTMClassifier(nn.Module):
         c0 = Variable(th.zeros(*state_shape, dtype=th.float32),
                       requires_grad=False).to(self.device)
 
-        _, (_, out) = self.rnn(rnn_inputs, (h0, c0))
+        _, (out, _) = self.rnn(rnn_inputs, (h0, c0))
         out = th.cat([x for x in out], dim=1)
         return out

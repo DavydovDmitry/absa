@@ -2,6 +2,7 @@ from typing import List, Dict
 import logging
 import time
 import copy
+import sys
 from functools import reduce
 from dataclasses import dataclass
 
@@ -10,8 +11,10 @@ import numpy as np
 from gensim.models import KeyedVectors
 from frozendict import frozendict
 from scipy.optimize import minimize as minimize
+from tqdm import tqdm
+from sklearn.model_selection import train_test_split
 
-from src import sentence_aspect_classifier_dump_path, SCORE_DECIMAL_LEN
+from src import sentence_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
 from src.review.parsed_sentence import ParsedSentence
 from src.review.target import Target
 from .loader import DataLoader
@@ -63,17 +66,20 @@ class AspectClassifier:
 
         criterion = th.nn.BCEWithLogitsLoss()
         self.loss_func = lambda y_pred, y: criterion(y_pred, y)
+        self.threshold = None
 
     def fit(self,
             train_sentences: List[ParsedSentence],
+            val_sentences: List[ParsedSentence] = None,
             optimizer_class=th.optim.Adam,
             optimizer_params=frozendict({
                 'lr': 0.01,
             }),
             num_epoch=50,
-            verbose=True,
+            verbose=False,
             save_state=True):
         """Fit on train sentences and save model state."""
+
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         if verbose:
             logging.info(
@@ -88,66 +94,72 @@ class AspectClassifier:
                                    aspect_labels=self.aspect_labels,
                                    device=self.device)
 
-        for epoch in range(num_epoch):
+        if val_sentences:
+            val_batches = DataLoader(sentences=val_sentences,
+                                     batch_size=self.batch_size,
+                                     vocabulary=self.vocabulary,
+                                     aspect_labels=self.aspect_labels,
+                                     device=self.device)
+            val_f1_history = []
+        train_f1_history = []
 
-            # Train
-            start_time = time.process_time()
-            train_len = len(train_batches)
-            self.model.train()
-            train_loss, train_acc = 0., 0.
-            for i, batch in enumerate(train_batches):
-                optimizer.zero_grad()
-                logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
-                loss = self.loss_func(logits, batch.labels)
-                loss.backward()
-                optimizer.step()
+        x0 = np.random.random(len(self.aspect_labels)) - 1.0
+        with tqdm(total=num_epoch, ncols=PROGRESSBAR_COLUMNS_NUM,
+                  file=sys.stdout) as progress_bar:
+            for epoch in range(num_epoch):
 
-                train_loss += loss.data
-            train_loss = train_loss / train_len
+                self.model.train()
+                train_logits, train_labels = [], []
+                for i, batch in enumerate(train_batches):
+                    optimizer.zero_grad()
+                    logits = self.model(embed_ids=batch.embed_ids,
+                                        sentence_len=batch.sentence_len)
+                    loss = self.loss_func(logits, batch.labels)
+                    loss.backward()
+                    optimizer.step()
 
-            logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-            logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-            logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ')
+                    train_logits.append(logits.to('cpu').data.numpy())
+                    train_labels.append(batch.labels.to('cpu').data.numpy())
+                train_logits = np.concatenate(train_logits)
+                train_labels = np.concatenate(train_labels)
+                opt_results = minimize(lambda threshold: self.f1_score(
+                    logits=train_logits, labels=train_labels, threshold=threshold),
+                                       x0=x0)
+                self.threshold = opt_results.x
+                train_f1_history.append(opt_results.fun)
+
+                if val_sentences:
+                    val_logits, val_labels = [], []
+                    self.model.eval()
+                    for i, batch in enumerate(val_batches):
+                        logit = self.model(embed_ids=batch.embed_ids,
+                                           sentence_len=batch.sentence_len)
+                        val_logits.append(logit.to('cpu').data.numpy())
+                        val_labels.append(batch.labels.to('cpu').data.numpy())
+                    val_logits = np.concatenate(val_logits)
+                    val_labels = np.concatenate(val_labels)
+                    val_f1_history.append(
+                        self.f1_score(logits=val_logits,
+                                      labels=val_labels,
+                                      threshold=self.threshold))
+                progress_bar.update(1)
 
         if save_state:
             self.save_model()
+        if val_sentences is not None:
+            return train_f1_history, val_f1_history
 
-    def select_threshold(self, sentences: List[ParsedSentence]):
-        def f1_score(threshold):
-            labels_pred = np.where(logits > threshold, 1, 0)
-            correct = labels[labels_pred.nonzero()].sum()
-            total_predictions = labels_pred.sum()
-            total_labels = labels.sum()
+    @staticmethod
+    def f1_score(logits: np.array, labels: np.array, threshold: np.array) -> float:
+        labels_pred = np.where(logits > threshold, 1, 0)
+        correct = labels[labels_pred.nonzero()].sum()
+        total_predictions = labels_pred.sum()
+        total_labels = labels.sum()
 
-            precision = correct / total_predictions
-            recall = correct / total_labels
-            f1 = 2 * (precision * recall) / (precision + recall)
-            # logging.info(f'{f1}: {threshold}')
-            return -f1
-
-        train_batches = DataLoader(sentences=sentences,
-                                   batch_size=self.batch_size,
-                                   vocabulary=self.vocabulary,
-                                   aspect_labels=self.aspect_labels,
-                                   device=self.device)
-
-        logits = []
-        labels = []
-        self.model.eval()
-        for i, batch in enumerate(train_batches):
-            logit = self.model(embed_ids=batch.embed_ids,
-                               sentence_len=batch.sentence_len).to('cpu').data.numpy()
-            label = batch.labels.to('cpu').data.numpy()
-            logits.append(logit)
-            labels.append(label)
-        logits = np.concatenate(logits)
-        labels = np.concatenate(labels)
-        x0 = np.random.random(len(self.aspect_labels)) - 1.0
-        opt_results = minimize(f1_score, x0=x0, options={
-            'adaptive': True,
-        })
-        logging.info(opt_results)
-        self.threshold = opt_results.x
+        precision = correct / total_predictions
+        recall = correct / total_labels
+        f1 = 2 * (precision * recall) / (precision + recall)
+        return f1
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
         """Modify passed sentences. Define every target polarity.
