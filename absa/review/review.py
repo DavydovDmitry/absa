@@ -15,7 +15,7 @@ from gensim.models import KeyedVectors
 from tqdm import tqdm
 from .sentence import Sentence
 from .target import Target
-from src import PROGRESSBAR_COLUMNS_NUM
+from absa import PROGRESSBAR_COLUMNS_NUM
 
 
 class Review:

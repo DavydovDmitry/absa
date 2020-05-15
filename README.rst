@@ -1,39 +1,52 @@
 *****
 ABSA
 *****
-This is pipeline for aspect-based sentiment analysis. Essential stages:
+This is pipeline for aspect-based sentiment analysis. Essential stages::
 
-1. Preprocess::
 
-    +------------------------------------- Preprocess pipeline ----------+
-    |             |                                                      |
-    |             V                                                      |
-    |       Upload reviews                                               |
-    |             |                                                      |
-    |             |     List[Reviews]                                    |
-    |             V                                                      |
-    |         Spell check                                                |
-    |             |                                                      |
-    |             |     List[Reviews]                                    |
-    |             V                                                      |
-    |      Dependency parsing                                            |
-    |             |                                                      |
-    |             V                                                      |
-    +--------------------------------------------------------------------+
-
-2. Aspect term extraction
-
-3. Polarity classification
+    +-------------------------------------- Preprocess pipeline ---------------+
+    |             |                                                            |
+    |             V                                                            |
+    |       Upload reviews                                                     |
+    |             |                                                            |
+    |             |     List[Reviews]                                          |
+    |             V                                                            |
+    |         Spell check                                                      |
+    |             |                                                            |
+    |             |     List[Reviews]                                          |
+    |             V                                                            |
+    |      Dependency parsing                                                  |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
+                  |
+                  V
+    +-------------------------------------- ABSA pipeline ---------------------+
+    |             |                                                            |
+    +-------------------------------------- Aspect Classification -------------+
+    |             V                                                            |
+    | Sentence Level Aspect Classification                                     |
+    |             |                                                            |
+    |             |     List[ParsedSentences]                                  |
+    |             V                                                            |
+    | Target Level Aspect Classification                                       |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
+    |             |     List[ParsedSentences]                                  |
+    |             V                                                            |
+    |      Polarity Classification                                             |
+    |             |                                                            |
+    |             V                                                            |
+    +--------------------------------------------------------------------------+
 
 ----------
 Execution
 ----------
 
-Just execute `source.py` to run full pipeline:
+Just execute `run_pipeline.py` to run full pipeline:
 
 .. code-block:: bash
 
-    python source.py
+    python run_pipeline.py
 
 ----------
 Setup

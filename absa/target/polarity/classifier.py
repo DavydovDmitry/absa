@@ -11,9 +11,9 @@ from sklearn import metrics
 from gensim.models import KeyedVectors
 from frozendict import frozendict
 
-from src import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path
-from src.review.parsed_sentence import ParsedSentence
-from src.review.target import Polarity
+from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path
+from absa.review.parsed_sentence import ParsedSentence
+from absa.review.target import Polarity
 from .loader import DataLoader, Batch
 from .nn.nn import NeurelNetwork
 

@@ -8,9 +8,9 @@ import networkx as nx
 import stanfordnlp
 from tqdm import tqdm
 
-from src import PROGRESSBAR_COLUMNS_NUM
-from src.review.review import Review, Target
-from src.review.parsed_sentence import ParsedSentence
+from absa import PROGRESSBAR_COLUMNS_NUM
+from absa.review.review import Review, Target
+from absa.review.parsed_sentence import ParsedSentence
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 

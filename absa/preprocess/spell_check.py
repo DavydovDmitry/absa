@@ -10,8 +10,8 @@ import re
 import requests
 from tqdm import tqdm
 
-from src import PROGRESSBAR_COLUMNS_NUM
-from src.review.review import Review
+from absa import PROGRESSBAR_COLUMNS_NUM
+from absa.review.review import Review
 
 
 def split_text(text: List[str], line_length=300) -> List[List[str]]:

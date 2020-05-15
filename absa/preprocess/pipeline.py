@@ -8,9 +8,9 @@ import warnings
 import stanfordnlp
 from gensim.models import KeyedVectors
 
-from src import TEST_APPENDIX
-from src import train_reviews_path, test_reviews_path, parsed_reviews_dump_path, checked_reviews_dump_path
-from src.review import get_reviews, load_reviews, dump_reviews, reviews_dump_path
+from absa import TEST_APPENDIX
+from absa import train_reviews_path, test_reviews_path, parsed_reviews_dump_path, checked_reviews_dump_path
+from absa.review import get_reviews, load_reviews, dump_reviews, reviews_dump_path
 from .spell_check import spell_check, load_checked_reviews, dump_checked_reviews
 from .dep_parse import parse_reviews, load_parsed_reviews, dump_parsed_reviews
 

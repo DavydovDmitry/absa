@@ -1,8 +1,8 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 import logging
 import time
 import copy
-from functools import reduce
+import sys
 from dataclasses import dataclass
 
 import torch as th
@@ -10,18 +10,19 @@ import numpy as np
 from gensim.models import KeyedVectors
 from frozendict import frozendict
 from sklearn.metrics import f1_score
+from tqdm import tqdm
 
-from src import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN
-from src.review.parsed_sentence import ParsedSentence
-from src.review.target import Target
+from absa import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
+from absa.review.parsed_sentence import ParsedSentence
+from absa.review.target import Target
+from absa.labels.labels import Labels
+from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
-from src.labels.labels import Labels
-from src.labels.default import ASPECT_LABELS
 
 
 class AspectClassifier:
-    """Aspect classifier
+    """Target level aspect classifier
 
     Attributes
     ----------
@@ -70,10 +71,9 @@ class AspectClassifier:
             }),
             num_epoch=50,
             verbose=False,
-            save_state=True):
+            save_state=True) -> Union[np.array, Tuple[np.array, np.array]]:
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-
         optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
@@ -90,7 +90,7 @@ class AspectClassifier:
             val_loss_history, val_f1_history = [], []
         train_f1_history, train_loss_history = [], []
 
-        for epoch in range(num_epoch):
+        def epoch_step():
 
             # Train
             start_time = time.process_time()
@@ -132,16 +132,30 @@ class AspectClassifier:
                 train_loss = train_loss / train_len
                 val_loss = val_loss / val_len
 
-                logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-                logging.info(f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
-                logging.info(f'Train      ' + f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
-                             f'f1_score: {train_f1:.{SCORE_DECIMAL_LEN}f}')
-                logging.info(f'Validation ' + f'loss: {(val_loss):.{SCORE_DECIMAL_LEN}f}| ' +
-                             f'f1_score: {val_f1:.{SCORE_DECIMAL_LEN}f}')
+                if verbose:
+                    logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
+                    logging.info(
+                        f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
+                    logging.info(f'Train      ' +
+                                 f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
+                                 f'f1_score: {train_f1:.{SCORE_DECIMAL_LEN}f}')
+                    logging.info(f'Validation ' +
+                                 f'loss: {(val_loss):.{SCORE_DECIMAL_LEN}f}| ' +
+                                 f'f1_score: {val_f1:.{SCORE_DECIMAL_LEN}f}')
 
                 val_loss_history.append(val_loss)
+                train_loss_history.append(train_loss)
                 val_f1_history.append(val_f1)
-            train_loss_history.append(train_loss)
+
+        if verbose:
+            for epoch in range(num_epoch):
+                epoch_step()
+        else:
+            with tqdm(total=num_epoch, ncols=PROGRESSBAR_COLUMNS_NUM,
+                      file=sys.stdout) as progress_bar:
+                for epoch in range(num_epoch):
+                    epoch_step()
+                    progress_bar.update(1)
 
         if save_state:
             self.save_model()
@@ -150,7 +164,14 @@ class AspectClassifier:
         return train_f1_history
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
-        """Modify passed sentences. Define every target polarity.
+        """Predict sentence aspect terms and it's categories.
+
+        Expecting to receive sentences with defined sentence level aspect
+        categories. If there is aspect category in sentence, then it has a
+        implicit target (empty list of nodes) with this category.
+        This function extend this list by explicit targets (non-empty list
+        of nodes). If there is explicit target with category A then
+        implicit target with the same category A will be removed.
 
         Parameters
         ----------
@@ -257,7 +278,6 @@ class AspectClassifier:
                     if (y.nodes == y_pred.nodes) and (y.category == y_pred.category):
                         correct_predictions += 1
                         break
-            # total_targets += len([t for t in sentences[sentence_index].targets if t.nodes])
             total_targets += len(sentences[sentence_index].targets)
             total_predictions += len(sentences_pred[sentence_index].targets)
 

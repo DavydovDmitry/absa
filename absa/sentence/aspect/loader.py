@@ -4,9 +4,9 @@ from collections import namedtuple
 import torch as th
 import numpy as np
 
-from src import UNKNOWN_WORD, PAD_WORD
-from src.review.parsed_sentence import ParsedSentence
-from src.labels.labels import Labels
+from absa import UNKNOWN_WORD, PAD_WORD
+from absa.review.parsed_sentence import ParsedSentence
+from absa.labels.labels import Labels
 
 Batch = namedtuple(
     'Batch',

@@ -4,7 +4,7 @@ from typing import List
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-from src import images_path
+from absa import images_path
 
 SCORE_NAME = 'accuracy'
 PARAMETER_DECIMAL_LEN = 5

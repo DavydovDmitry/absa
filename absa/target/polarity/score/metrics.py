@@ -7,8 +7,8 @@ targets.
 from typing import List
 import logging
 
-from src import SCORE_DECIMAL_LEN
-from src.review.parsed_sentence import ParsedSentence
+from absa import SCORE_DECIMAL_LEN
+from absa.review.parsed_sentence import ParsedSentence
 
 
 def get_sb3(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]) -> float:

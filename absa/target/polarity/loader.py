@@ -4,8 +4,8 @@ from collections import namedtuple
 import torch as th
 import dgl
 
-from src import UNKNOWN_WORD, PAD_WORD
-from src.review.parsed_sentence import ParsedSentence
+from absa import UNKNOWN_WORD, PAD_WORD
+from absa.review.parsed_sentence import ParsedSentence
 
 Batch = namedtuple(
     'Batch',
