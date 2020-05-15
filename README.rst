@@ -26,6 +26,16 @@ This is pipeline for aspect-based sentiment analysis. Essential stages:
 3. Polarity classification
 
 ----------
+Execution
+----------
+
+Just execute `source.py` to run full pipeline:
+
+.. code-block:: bash
+
+    python source.py
+
+----------
 Setup
 ----------
 
