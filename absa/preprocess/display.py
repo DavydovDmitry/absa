@@ -15,10 +15,10 @@ import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
 from typing_extensions import TypedDict
 
-from src import labeled_reviews_dump_path
-from src import EXTENDED_POLARITIES
-from src.review.review import Review
-from src.review.parsed_sentence import ParsedSentence
+from absa import labeled_reviews_dump_path
+from absa import EXTENDED_POLARITIES
+from absa.review.review import Review
+from absa.review.parsed_sentence import ParsedSentence
 
 NODE_SIZE = 500
 ARROW_COLOR = '#e0e0e0'

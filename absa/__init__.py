@@ -15,8 +15,8 @@ competition_path = os.path.join(module_path, 'datasets/SemEval2016')
 
 TEST_APPENDIX = '.test'  # suffix for test dumps
 
-train_reviews_path = os.path.join(competition_path, 'dataset', 'train.xml')
-test_reviews_path = os.path.join(competition_path, 'dataset', 'test.xml')
+train_reviews_path = os.path.join(competition_path, 'train.xml')
+test_reviews_path = os.path.join(competition_path, 'test.xml')
 
 embeddings_path = os.path.join(module_path, 'embeddings')
 word2vec_model_path = os.path.join(embeddings_path, 'tayga_upos_skipgram_300_2_2019',

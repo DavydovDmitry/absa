@@ -1,9 +1,8 @@
-from typing import List, Dict
+from typing import List, Dict, Union, Tuple
 import logging
 import time
 import copy
 import sys
-from functools import reduce
 from dataclasses import dataclass
 
 import torch as th
@@ -12,15 +11,14 @@ from gensim.models import KeyedVectors
 from frozendict import frozendict
 from scipy.optimize import minimize as minimize
 from tqdm import tqdm
-from sklearn.model_selection import train_test_split
 
-from src import sentence_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
-from src.review.parsed_sentence import ParsedSentence
-from src.review.target import Target
+from absa import sentence_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
+from absa.review.parsed_sentence import ParsedSentence
+from absa.review.target import Target
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
-from src.labels.labels import Labels
-from src.labels.default import ASPECT_LABELS
+from absa.labels.labels import Labels
+from absa.labels.default import ASPECT_LABELS
 
 
 class AspectClassifier:
@@ -82,7 +80,9 @@ class AspectClassifier:
                 'lr': 0.01,
             }),
             num_epoch=50,
-            save_state=True):
+            fixed_threshold=False,
+            save_state=True,
+            verbose=False) -> Union[np.array, Tuple[np.array, np.array]]:
         """Fit on train sentences and save model state.
 
         Every epoch consist from 2 stages
@@ -101,6 +101,7 @@ class AspectClassifier:
                                    vocabulary=self.vocabulary,
                                    aspect_labels=self.aspect_labels,
                                    device=self.device)
+        train_f1_history = np.empty(shape=(num_epoch, ), dtype=np.float)
 
         if val_sentences:
             val_batches = DataLoader(sentences=val_sentences,
@@ -108,48 +109,61 @@ class AspectClassifier:
                                      vocabulary=self.vocabulary,
                                      aspect_labels=self.aspect_labels,
                                      device=self.device)
-            val_f1_history = []
-        train_f1_history = []
+            val_f1_history = np.empty(shape=(num_epoch, ), dtype=np.float)
 
-        with tqdm(total=num_epoch, ncols=PROGRESSBAR_COLUMNS_NUM,
-                  file=sys.stdout) as progress_bar:
-            for epoch in range(num_epoch):
+        def epoch_step():
+            # Train
+            self.model.train()
+            train_logits, train_labels = [], []
+            for i, batch in enumerate(train_batches):
+                optimizer.zero_grad()
+                logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
+                loss = self.loss_func(logits, batch.labels)
+                loss.backward()
+                optimizer.step()
 
-                self.model.train()
-                train_logits, train_labels = [], []
-                for i, batch in enumerate(train_batches):
-                    optimizer.zero_grad()
-                    logits = self.model(embed_ids=batch.embed_ids,
-                                        sentence_len=batch.sentence_len)
-                    loss = self.loss_func(logits, batch.labels)
-                    loss.backward()
-                    optimizer.step()
-
-                    train_logits.append(logits.to('cpu').data.numpy())
-                    train_labels.append(batch.labels.to('cpu').data.numpy())
-                train_logits = np.concatenate(train_logits)
-                train_labels = np.concatenate(train_labels)
+                train_logits.append(logits.to('cpu').data.numpy())
+                train_labels.append(batch.labels.to('cpu').data.numpy())
+            train_logits = np.concatenate(train_logits)
+            train_labels = np.concatenate(train_labels)
+            if not fixed_threshold:
                 opt_results = minimize(lambda threshold: -self.f1_score(
                     logits=train_logits, labels=train_labels, threshold=threshold),
                                        x0=self.threshold)
                 self.threshold = opt_results.x
-                train_f1_history.append(-opt_results.fun)
+                f1_score = -opt_results.fun
+            else:
+                f1_score = self.f1_score(logits=train_logits,
+                                         labels=train_labels,
+                                         threshold=self.threshold)
+            train_f1_history[epoch] = f1_score
 
-                if val_sentences:
-                    val_logits, val_labels = [], []
-                    self.model.eval()
-                    for i, batch in enumerate(val_batches):
-                        logit = self.model(embed_ids=batch.embed_ids,
-                                           sentence_len=batch.sentence_len)
-                        val_logits.append(logit.to('cpu').data.numpy())
-                        val_labels.append(batch.labels.to('cpu').data.numpy())
-                    val_logits = np.concatenate(val_logits)
-                    val_labels = np.concatenate(val_labels)
-                    val_f1_history.append(
-                        self.f1_score(logits=val_logits,
-                                      labels=val_labels,
-                                      threshold=self.threshold))
-                progress_bar.update(1)
+            # Validation
+            if val_sentences:
+                val_logits, val_labels = [], []
+                self.model.eval()
+                for i, batch in enumerate(val_batches):
+                    logit = self.model(embed_ids=batch.embed_ids,
+                                       sentence_len=batch.sentence_len)
+                    val_logits.append(logit.to('cpu').data.numpy())
+                    val_labels.append(batch.labels.to('cpu').data.numpy())
+                val_logits = np.concatenate(val_logits)
+                val_labels = np.concatenate(val_labels)
+                val_f1_history[epoch] = self.f1_score(logits=val_logits,
+                                                      labels=val_labels,
+                                                      threshold=self.threshold)
+
+            # todo: logging
+
+        if verbose:
+            for epoch in range(num_epoch):
+                epoch_step()
+        else:
+            with tqdm(total=num_epoch, ncols=PROGRESSBAR_COLUMNS_NUM,
+                      file=sys.stdout) as progress_bar:
+                for epoch in range(num_epoch):
+                    epoch_step()
+                    progress_bar.update(1)
 
         if save_state:
             self.save_model()

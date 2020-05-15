@@ -8,15 +8,15 @@ import copy
 import numpy as np
 import torch as th
 
-from src import TEST_APPENDIX, log_path
-from src.preprocess.dep_parse import load_parsed_reviews
-from src import parsed_reviews_dump_path
-from src.utils.embedding import get_embeddings
-from src.preprocess.pipeline import preprocess_pipeline
-from src.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
-from src.target.aspect.classifier import AspectClassifier as TargetAspectClassifier
-from src.target.polarity.classifier import PolarityClassifier
-from src.review.parsed_sentence import ParsedSentence
+from absa import TEST_APPENDIX, log_path
+from absa.preprocess.dep_parse import load_parsed_reviews
+from absa import parsed_reviews_dump_path
+from absa.utils.embedding import get_embeddings
+from absa.preprocess.pipeline import preprocess_pipeline
+from absa.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
+from absa.target.aspect.classifier import AspectClassifier as TargetAspectClassifier
+from absa.target.polarity.classifier import PolarityClassifier
+from absa.review.parsed_sentence import ParsedSentence
 
 SEED = 42
 
@@ -48,7 +48,7 @@ def sentence_aspect_classification(
         test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
     # classifier = SentenceAspectClassifier.load_model()
     classifier = SentenceAspectClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+    classifier.fit(train_sentences=train_sentences)
 
     test_sentences_pred = copy.deepcopy(test_sentences)
     for sentence in test_sentences_pred:

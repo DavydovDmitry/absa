@@ -1,6 +1,6 @@
 import os
 
-from src import dumps_path
+from absa import dumps_path
 
 reviews_dump_path = os.path.join(dumps_path, 'reviews')
 

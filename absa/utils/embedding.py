@@ -3,8 +3,8 @@ from gensim.test.utils import datapath
 import torch as th
 import numpy as np
 
-from src import word2vec_model_path
-from src import UNKNOWN_WORD, PAD_WORD
+from absa import word2vec_model_path
+from absa import UNKNOWN_WORD, PAD_WORD
 
 
 def get_embeddings() -> KeyedVectors:
