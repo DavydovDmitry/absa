@@ -39,7 +39,6 @@ class AspectClassifier:
                  vocabulary: Dict[str, int] = None,
                  emb_matrix: th.Tensor = None,
                  aspect_labels: List[str] = ASPECT_LABELS,
-                 threshold: np.array = None,
                  batch_size: int = 100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
@@ -66,12 +65,6 @@ class AspectClassifier:
         criterion = th.nn.BCEWithLogitsLoss()
         self.loss_func = lambda y_pred, y: criterion(y_pred, y)
 
-        # select pretrained threshold or init for future optimization
-        if threshold is None:
-            self.threshold = np.random.random(len(self.aspect_labels)) - 1.0
-        else:
-            self.threshold = threshold
-
     def fit(self,
             train_sentences: List[ParsedSentence],
             val_sentences: List[ParsedSentence] = None,
@@ -80,6 +73,7 @@ class AspectClassifier:
                 'lr': 0.01,
             }),
             num_epoch=50,
+            init_threshold: np.array = None,
             fixed_threshold=False,
             save_state=True,
             verbose=False) -> Union[np.array, Tuple[np.array, np.array]]:
@@ -92,6 +86,11 @@ class AspectClassifier:
         - Validation
             Calculate scores on unseen sentences.
         """
+
+        if init_threshold is None:
+            self.threshold = np.random.random(len(self.aspect_labels)) - 1.0
+        else:
+            self.threshold = init_threshold
 
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, **optimizer_params)
@@ -169,6 +168,7 @@ class AspectClassifier:
             self.save_model()
         if val_sentences is not None:
             return train_f1_history, val_f1_history
+        return train_f1_history
 
     @staticmethod
     def f1_score(logits: np.array, labels: np.array, threshold: np.array) -> float:

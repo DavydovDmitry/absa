@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 import logging
 import time
 import copy
@@ -71,7 +71,7 @@ class AspectClassifier:
             }),
             num_epoch=50,
             verbose=False,
-            save_state=True):
+            save_state=True) -> Union[np.array, Tuple[np.array, np.array]]:
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, **optimizer_params)
