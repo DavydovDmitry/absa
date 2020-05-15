@@ -1,11 +1,10 @@
 *****
 ABSA
 *****
-This is pipeline for aspect-based sentiment analysis. Essential stages:
+This is pipeline for aspect-based sentiment analysis. Essential stages::
 
-1. Preprocess::
 
-    +------------------------------------- Preprocess pipeline ----------+
+    +-------------------------------------- Preprocess pipeline ---------+
     |             |                                                      |
     |             V                                                      |
     |       Upload reviews                                               |
@@ -18,12 +17,26 @@ This is pipeline for aspect-based sentiment analysis. Essential stages:
     |             V                                                      |
     |      Dependency parsing                                            |
     |             |                                                      |
+    +--------------------------------------------------------------------+
+                  |
+                  V
+    +-------------------------------------- ABSA pipeline ---------------+
+    |             |                                                      |
+    +-------------------------------------- Aspect Classification -------+
+    |             V                                                      |
+    | Sentence Level Aspect Classification                               |
+    |             |                                                      |
+    |             |     List[ParsedSentences]                            |
+    |             V                                                      |
+    | Target Level Aspect Classification                                 |
+    |             |                                                      |
+    +--------------------------------------------------------------------+
+    |             |     List[ParsedSentences]                            |
+    |             V                                                      |
+    |      Polarity Classification                                       |
+    |             |                                                      |
     |             V                                                      |
     +--------------------------------------------------------------------+
-
-2. Aspect term extraction
-
-3. Polarity classification
 
 ----------
 Execution

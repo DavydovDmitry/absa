@@ -24,7 +24,7 @@ from src.labels.default import ASPECT_LABELS
 
 
 class AspectClassifier:
-    """Aspect classifier
+    """Sentence level aspect classifier
 
     Attributes
     ----------
@@ -37,17 +37,18 @@ class AspectClassifier:
         matrix of pretrained embeddings
     """
     def __init__(self,
-                 word2vec: KeyedVectors = ...,
-                 vocabulary: Dict[str, int] = ...,
-                 emb_matrix: th.Tensor = ...,
-                 aspect_labels=ASPECT_LABELS,
-                 batch_size=100):
+                 word2vec: KeyedVectors = None,
+                 vocabulary: Dict[str, int] = None,
+                 emb_matrix: th.Tensor = None,
+                 aspect_labels: List[str] = ASPECT_LABELS,
+                 threshold: np.array = None,
+                 batch_size: int = 100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
         self.aspect_labels = Labels(labels=aspect_labels)
 
         # prepare vocabulary and embeddings
-        if isinstance(word2vec, KeyedVectors):
+        if word2vec is not None:
             self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
             emb_matrix = th.FloatTensor(word2vec.vectors)
         else:
@@ -66,26 +67,33 @@ class AspectClassifier:
 
         criterion = th.nn.BCEWithLogitsLoss()
         self.loss_func = lambda y_pred, y: criterion(y_pred, y)
-        self.threshold = None
+
+        # select pretrained threshold or init for future optimization
+        if threshold is None:
+            self.threshold = np.random.random(len(self.aspect_labels)) - 1.0
+        else:
+            self.threshold = threshold
 
     def fit(self,
             train_sentences: List[ParsedSentence],
             val_sentences: List[ParsedSentence] = None,
             optimizer_class=th.optim.Adam,
-            optimizer_params=frozendict({
+            optimizer_params: Dict = frozendict({
                 'lr': 0.01,
             }),
             num_epoch=50,
-            verbose=False,
             save_state=True):
-        """Fit on train sentences and save model state."""
+        """Fit on train sentences and save model state.
+
+        Every epoch consist from 2 stages
+        - Train stage
+            Optimize parameters of neural network and select optimal
+            threshold for every class.
+        - Validation
+            Calculate scores on unseen sentences.
+        """
 
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if verbose:
-            logging.info(
-                f'Number of trainable parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
-            )
-
         optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
@@ -103,7 +111,6 @@ class AspectClassifier:
             val_f1_history = []
         train_f1_history = []
 
-        x0 = np.random.random(len(self.aspect_labels)) - 1.0
         with tqdm(total=num_epoch, ncols=PROGRESSBAR_COLUMNS_NUM,
                   file=sys.stdout) as progress_bar:
             for epoch in range(num_epoch):
@@ -122,11 +129,11 @@ class AspectClassifier:
                     train_labels.append(batch.labels.to('cpu').data.numpy())
                 train_logits = np.concatenate(train_logits)
                 train_labels = np.concatenate(train_labels)
-                opt_results = minimize(lambda threshold: self.f1_score(
+                opt_results = minimize(lambda threshold: -self.f1_score(
                     logits=train_logits, labels=train_labels, threshold=threshold),
-                                       x0=x0)
+                                       x0=self.threshold)
                 self.threshold = opt_results.x
-                train_f1_history.append(opt_results.fun)
+                train_f1_history.append(-opt_results.fun)
 
                 if val_sentences:
                     val_logits, val_labels = [], []
@@ -151,6 +158,23 @@ class AspectClassifier:
 
     @staticmethod
     def f1_score(logits: np.array, labels: np.array, threshold: np.array) -> float:
+        """Calculate f1 score from nn output.
+
+        Parameters
+        ----------
+        logits : np.array
+            neural network predictions for every aspect.
+        labels : np.array
+            array of {0, 1} where:
+        1 - aspect present in sentence, 0 - otherwise.
+        threshold : np.array
+            threshold for aspect selection.
+
+        Returns
+        -------
+        f1_score : float
+            macro f1 score
+        """
         labels_pred = np.where(logits > threshold, 1, 0)
         correct = labels[labels_pred.nonzero()].sum()
         total_predictions = labels_pred.sum()
@@ -162,7 +186,7 @@ class AspectClassifier:
         return f1
 
     def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
-        """Modify passed sentences. Define every target polarity.
+        """Modify passed sentences. Add targets with empty list of nodes.
 
         Parameters
         ----------
@@ -172,7 +196,7 @@ class AspectClassifier:
         Return
         -------
         sentences : List[ParsedSentence]
-            Sentences with defined polarity of every target.
+            Sentences with defined targets.
         """
         self.model.eval()
         sentences = copy.deepcopy(sentences)
@@ -205,23 +229,30 @@ class AspectClassifier:
 
     def save_model(self):
         """Save model state."""
-        th.save({
-            'vocabulary': self.vocabulary,
-            'model': self.model.state_dict()
-        }, sentence_aspect_classifier_dump_path)
+        th.save(
+            {
+                'vocabulary': self.vocabulary,
+                'model': self.model.state_dict(),
+                'threshold': self.threshold,
+            }, sentence_aspect_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'AspectClassifier':
-        """Load pretrained model."""
+        """Load pretrained state of model."""
         checkpoint = th.load(sentence_aspect_classifier_dump_path)
         model = checkpoint['model']
         classifier = AspectClassifier(vocabulary=checkpoint['vocabulary'],
-                                      emb_matrix=model['nn.embed.weight'])
+                                      emb_matrix=model['nn.embed.weight'],
+                                      threshold=checkpoint['threshold'])
         classifier.model.load_state_dict(model)
         return classifier
 
     @staticmethod
     def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]):
+        """Score function of classifier.
+
+        Match score for task 5 sb 1.1 of SemEval2016.
+        """
         total_labels = 0
         total_predictions = 0
         correct_predictions = 0

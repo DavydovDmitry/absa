@@ -1,21 +1,3 @@
-"""
-+------------------------------------- ABSA pipeline ----------------+
-|             |                                                      |
-|             V                                                      |
-|   Aspect term extraction                                           |
-|             |                                                      |
-|             |                                                      |
-|             V                                                      |
-|    Aspect classification                                           |
-|             |                                                      |
-|             |                                                      |
-|             V                                                      |
-|   Polarity Classification                                          |
-|             |                                                      |
-|             V                                                      |
-+--------------------------------------------------------------------+
-"""
-
 import logging
 from typing import List
 from functools import reduce
@@ -82,9 +64,9 @@ def sentence_aspect_classification(
 def target_aspect_classification(
         train_sentences: List[ParsedSentence], test_sentences: List[ParsedSentence],
         pred_test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
-    # classifier = TargetAspectClassifier.load_model()
-    classifier = TargetAspectClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+    classifier = TargetAspectClassifier.load_model()
+    # classifier = TargetAspectClassifier(word2vec=word2vec)
+    # classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
 
     test_sentences_pred = classifier.predict(pred_test_sentences)
     logging.info(
@@ -119,8 +101,8 @@ if __name__ == "__main__":
     configure_logging()
     word2vec = get_embeddings()
 
-    preprocess_pipeline(word2vec=word2vec, is_train=True)
-    preprocess_pipeline(word2vec=word2vec, is_train=False)
+    # preprocess_pipeline(word2vec=word2vec, is_train=True)
+    # preprocess_pipeline(word2vec=word2vec, is_train=False)
 
     train_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path)
     train_sentences = [x for x in reduce(lambda x, y: x + y, train_reviews)]
@@ -133,5 +115,5 @@ if __name__ == "__main__":
     target_aspect_classification(train_sentences=train_sentences,
                                  test_sentences=test_sentences,
                                  pred_test_sentences=pred_test_sentences)
-    target_polarity_classification(train_sentences=train_sentences,
-                                   test_sentences=test_sentences)
+    # target_polarity_classification(train_sentences=train_sentences,
+    #                                test_sentences=test_sentences)
