@@ -4,39 +4,39 @@ ABSA
 This is pipeline for aspect-based sentiment analysis. Essential stages::
 
 
-    +-------------------------------------- Preprocess pipeline ---------+
-    |             |                                                      |
-    |             V                                                      |
-    |       Upload reviews                                               |
-    |             |                                                      |
-    |             |     List[Reviews]                                    |
-    |             V                                                      |
-    |         Spell check                                                |
-    |             |                                                      |
-    |             |     List[Reviews]                                    |
-    |             V                                                      |
-    |      Dependency parsing                                            |
-    |             |                                                      |
-    +--------------------------------------------------------------------+
+    +-------------------------------------- Preprocess pipeline ---------------+
+    |             |                                                            |
+    |             V                                                            |
+    |       Upload reviews                                                     |
+    |             |                                                            |
+    |             |     List[Reviews]                                          |
+    |             V                                                            |
+    |         Spell check                                                      |
+    |             |                                                            |
+    |             |     List[Reviews]                                          |
+    |             V                                                            |
+    |      Dependency parsing                                                  |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
                   |
                   V
-    +-------------------------------------- ABSA pipeline ---------------+
-    |             |                                                      |
-    +-------------------------------------- Aspect Classification -------+
-    |             V                                                      |
-    | Sentence Level Aspect Classification                               |
-    |             |                                                      |
-    |             |     List[ParsedSentences]                            |
-    |             V                                                      |
-    | Target Level Aspect Classification                                 |
-    |             |                                                      |
-    +--------------------------------------------------------------------+
-    |             |     List[ParsedSentences]                            |
-    |             V                                                      |
-    |      Polarity Classification                                       |
-    |             |                                                      |
-    |             V                                                      |
-    +--------------------------------------------------------------------+
+    +-------------------------------------- ABSA pipeline ---------------------+
+    |             |                                                            |
+    +-------------------------------------- Aspect Classification -------------+
+    |             V                                                            |
+    | Sentence Level Aspect Classification                                     |
+    |             |                                                            |
+    |             |     List[ParsedSentences]                                  |
+    |             V                                                            |
+    | Target Level Aspect Classification                                       |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
+    |             |     List[ParsedSentences]                                  |
+    |             V                                                            |
+    |      Polarity Classification                                             |
+    |             |                                                            |
+    |             V                                                            |
+    +--------------------------------------------------------------------------+
 
 ----------
 Execution
