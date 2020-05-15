@@ -4,10 +4,10 @@ import torch as th
 import torch.nn as nn
 import dgl
 
-from .nn import LSTMNN
+from .stack_lstm import StackLSTM
 
 
-class TargetClassifier(nn.Module):
+class NeurelNetwork(nn.Module):
     """Targets polarity classifier
 
     Essential stages:
@@ -23,10 +23,10 @@ class TargetClassifier(nn.Module):
                  tree_lstm_dim=30):
         super().__init__()
         self.device = device
-        self.nn = LSTMNN(emb_matrix=emb_matrix,
-                         device=self.device,
-                         rnn_dim=rnn_dim,
-                         out_dim=tree_lstm_dim).to(self.device)
+        self.nn = StackLSTM(emb_matrix=emb_matrix,
+                            device=self.device,
+                            rnn_dim=rnn_dim,
+                            out_dim=tree_lstm_dim).to(self.device)
         self.classifier = nn.Linear(tree_lstm_dim, num_class)
 
     def forward(self, embed_ids: th.Tensor, graph: dgl.DGLGraph, target_mask: th.Tensor,

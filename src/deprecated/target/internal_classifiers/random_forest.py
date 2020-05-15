@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from gensim.models import KeyedVectors
 import numpy as np
 
-from src.target.miner import TargetMiner
+from src.deprecated.target.miner import TargetMiner
 from src.review.parsed_sentence import ParsedSentence
 from ..score.optimal_parameter_oob import analyse_parameter_oob
 from ..score.metrics import print_sb12

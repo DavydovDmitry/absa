@@ -61,3 +61,6 @@ class Target:
 
     def set_polarity(self, polarity: Union[str, int]):
         self.polarity = Polarity.get_polarity(polarity)
+
+    def reset_polarity(self):
+        self.polarity = DEFAULT_POLARITY

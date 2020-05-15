@@ -1,10 +1,28 @@
+"""
++------------------------------------- ABSA pipeline ----------------+
+|             |                                                      |
+|             V                                                      |
+|   Aspect term extraction                                           |
+|             |                                                      |
+|             |                                                      |
+|             V                                                      |
+|    Aspect classification                                           |
+|             |                                                      |
+|             |                                                      |
+|             V                                                      |
+|   Polarity Classification                                          |
+|             |                                                      |
+|             V                                                      |
++--------------------------------------------------------------------+
+"""
+
 import logging
 from typing import List
 from functools import reduce
 import datetime
 import os
+import copy
 
-from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import torch as th
 
@@ -12,14 +30,11 @@ from src import TEST_APPENDIX, log_path
 from src.preprocess.dep_parse import load_parsed_reviews
 from src import parsed_reviews_dump_path
 from src.utils.embedding import get_embeddings
-from src.target.internal_classifiers import analyze_random_forest
-from src.target.miner import TargetMiner
-from src.target.internal_classifiers.random_forest import parameters as random_forest_parameters
-from src.target.score.metrics import print_sb12
-from src.target.score.metrics import print_sb3
-from src.polarity.classifier import PolarityClassifier
-from src.review.parsed_sentence import ParsedSentence
 from src.preprocess.pipeline import preprocess_pipeline
+from src.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
+from src.target.aspect.classifier import AspectClassifier as TargetAspectClassifier
+from src.target.polarity.classifier import PolarityClassifier
+from src.review.parsed_sentence import ParsedSentence
 
 SEED = 42
 
@@ -46,28 +61,54 @@ def configure_logging():
     root_logger.addHandler(file_handler)
 
 
-def targets_extraction(train_sentences: List[ParsedSentence],
-                       test_sentences: List[ParsedSentence]):
-    """Print metric for target extraction"""
-    classifier = RandomForestClassifier(**random_forest_parameters)
-    target_classifier = TargetMiner(classifier=classifier, word2vec=word2vec)
-    target_classifier.fit(sentences=train_sentences)
-    sentences_pred = target_classifier.predict(test_sentences)
-    print_sb12(sentences=test_sentences, sentences_pred=sentences_pred)
-    return sentences_pred
+def sentence_aspect_classification(
+        train_sentences: List[ParsedSentence],
+        test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+    # classifier = SentenceAspectClassifier.load_model()
+    classifier = SentenceAspectClassifier(word2vec=word2vec)
+    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
 
-    # analyze_random_forest(word2vec=word2vec,
-    #                       train_sentences=train_sentences,
-    #                       test_sentences=test_sentences)
+    test_sentences_pred = copy.deepcopy(test_sentences)
+    for sentence in test_sentences_pred:
+        sentence.reset_targets()
+
+    test_sentences_pred = classifier.predict(test_sentences_pred)
+    logging.info(
+        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
+    )
+    return test_sentences_pred
 
 
-def polarity_classification(train_sentences: List[ParsedSentence],
-                            test_sentences: List[ParsedSentence]):
-    """Print metric for polarity classification"""
+def target_aspect_classification(
+        train_sentences: List[ParsedSentence], test_sentences: List[ParsedSentence],
+        pred_test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+    # classifier = TargetAspectClassifier.load_model()
+    classifier = TargetAspectClassifier(word2vec=word2vec)
+    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+
+    test_sentences_pred = classifier.predict(pred_test_sentences)
+    logging.info(
+        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
+    )
+    return test_sentences_pred
+
+
+def target_polarity_classification(
+        train_sentences: List[ParsedSentence],
+        test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+    # classifier = PolarityClassifier.load_model()
     classifier = PolarityClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences=train_sentences)
-    test_sentences_pred = classifier.predict(test_sentences)
-    print_sb3(sentences_pred=test_sentences_pred, sentences=test_sentences)
+    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+
+    test_sentences_pred = copy.deepcopy(test_sentences)
+    for sentence in test_sentences_pred:
+        sentence.reset_targets_polarities()
+
+    test_sentences_pred = classifier.predict(test_sentences_pred)
+    logging.info(
+        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
+    )
+    return test_sentences_pred
 
 
 if __name__ == "__main__":
@@ -78,8 +119,8 @@ if __name__ == "__main__":
     configure_logging()
     word2vec = get_embeddings()
 
-    # preprocess_pipeline(word2vec=word2vec, is_train=True)
-    # preprocess_pipeline(word2vec=word2vec, is_train=False)
+    preprocess_pipeline(word2vec=word2vec, is_train=True)
+    preprocess_pipeline(word2vec=word2vec, is_train=False)
 
     train_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path)
     train_sentences = [x for x in reduce(lambda x, y: x + y, train_reviews)]
@@ -87,5 +128,10 @@ if __name__ == "__main__":
     test_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path + TEST_APPENDIX)
     test_sentences = [x for x in reduce(lambda x, y: x + y, test_reviews)]
 
-    # targets_extraction(train_sentences=train_sentences, test_sentences=test_sentences)
-    polarity_classification(train_sentences=train_sentences, test_sentences=test_sentences)
+    pred_test_sentences = sentence_aspect_classification(train_sentences=train_sentences,
+                                                         test_sentences=test_sentences)
+    target_aspect_classification(train_sentences=train_sentences,
+                                 test_sentences=test_sentences,
+                                 pred_test_sentences=pred_test_sentences)
+    target_polarity_classification(train_sentences=train_sentences,
+                                   test_sentences=test_sentences)

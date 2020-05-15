@@ -28,12 +28,14 @@ log_path = os.path.join(module_path, 'logs')
 # --------------------------------- Dumps -------------------------------------
 dumps_path = os.path.join(module_path, 'dumps')
 
+# Processed data
 checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')
 parsed_reviews_dump_path = os.path.join(dumps_path, 'dep_parsed_sentence')
 labeled_reviews_dump_path = os.path.join(dumps_path, 'labeled_reviews')
 
-sb12_classifier_path = os.path.join(dumps_path, 'sb12_classifier')
-sb12_train_data_path = os.path.join(dumps_path, 'sb12_train_data')
-sb12_test_data_path = os.path.join(dumps_path, 'sb12_test_data')
-
-polarity_classifier_dump_path = os.path.join(dumps_path, 'polarity_classifier.pt')
+# classifiers
+sentence_aspect_classifier_dump_path = os.path.join(dumps_path,
+                                                    'sentence_aspect_classifier.pt')
+target_aspect_classifier_dump_path = os.path.join(dumps_path, 'target_aspect_classifier.pt')
+target_polarity_classifier_dump_path = os.path.join(dumps_path,
+                                                    'target_polarity_classifier.pt')

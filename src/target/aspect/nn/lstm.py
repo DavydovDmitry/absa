@@ -3,26 +3,24 @@ from typing import Tuple
 import torch as th
 import torch.nn as nn
 from torch.autograd import Variable
-import dgl
-
-from .tree_lstm import ChildSumTreeLSTMCell
 
 
-class LSTMNN(nn.Module):
-    """Stack of Bi-LSTM and Tree-LSTM neural networks.
+class LSTMClassifier(nn.Module):
+    """Bi LSTM
 
     First one run through sequence elements order. The last one run
     through dependency tree of sentence.
     """
-    def __init__(self,
-                 emb_matrix: th.Tensor,
-                 device: th.device,
-                 rnn_dim: int,
-                 out_dim: int,
-                 rnn_layers=1,
-                 input_dropout=0.7,
-                 rnn_dropout=0.1):
-        super(LSTMNN, self).__init__()
+    def __init__(
+        self,
+        emb_matrix: th.Tensor,
+        device: th.device,
+        rnn_dim: int,
+        bidirectional: bool,
+        rnn_layers=1,
+        input_dropout=0.7,
+    ):
+        super(LSTMClassifier, self).__init__()
         self.device = device
 
         self.embed = nn.Embedding(*emb_matrix.shape)
@@ -30,8 +28,7 @@ class LSTMNN(nn.Module):
 
         self.rnn_hidden = rnn_dim  # rnn out dim
         self.rnn_layers = rnn_layers  # number of lstm layers
-        self.mem_dim = out_dim  # tree lstm out dim
-        self.bidirectional = True  # use bi lstm
+        self.bidirectional = bidirectional
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=self.embed.embedding_dim,
@@ -40,35 +37,12 @@ class LSTMNN(nn.Module):
                            batch_first=True,
                            bidirectional=self.bidirectional)
 
-        # tree lstm layer
-        input_dim = rnn_dim * 2 if self.bidirectional else rnn_dim
-        self.tree_lstm = ChildSumTreeLSTMCell(input_dim, out_dim)
-        self.tree_lstm_hidden = nn.Linear(input_dim, out_dim)
-
         self.in_drop = nn.Dropout(input_dropout)
-        self.rnn_drop = nn.Dropout(rnn_dropout)
 
-    def forward(self, graph: dgl.DGLGraph, embed_ids: th.Tensor,
-                sentence_len: th.Tensor) -> th.Tensor:
+    def forward(self, embed_ids: th.Tensor, sentence_len: th.Tensor) -> th.Tensor:
         embeds = self.embed(embed_ids)
         embeds = self.in_drop(embeds)
-
-        # rnn layer
-        h = self.rnn_drop(self.encode_with_rnn(rnn_inputs=embeds, sentence_len=sentence_len))
-
-        # tree lstm layer
-        g = graph
-        g.register_message_func(self.tree_lstm.message_func)
-        g.register_reduce_func(self.tree_lstm.reduce_func)
-        g.register_apply_node_func(self.tree_lstm.apply_node_func)
-        g.ndata['iou'] = self.tree_lstm.W_iou(h)
-        g.ndata['h'] = self.tree_lstm_hidden(h)
-        g.ndata['c'] = Variable(th.zeros((graph.number_of_nodes(), self.mem_dim),
-                                         dtype=th.float32),
-                                requires_grad=False).to(self.device)
-        dgl.prop_nodes_topo(g)
-
-        return g.ndata.pop('h')
+        return self.encode_with_rnn(rnn_inputs=embeds, sentence_len=sentence_len)
 
     def encode_with_rnn(self, rnn_inputs: th.Tensor, sentence_len: th.Tensor) -> th.Tensor:
         """Encode batch with LSTM

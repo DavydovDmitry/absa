@@ -38,3 +38,13 @@ class ParsedSentence:
             targets.append(
                 Target(nodes=target_nodes, category=target.category, polarity=target.polarity))
         return Sentence(text=text, targets=targets)
+
+    def __len__(self):
+        return len(self.graph)
+
+    def reset_targets(self):
+        self.targets = []
+
+    def reset_targets_polarities(self):
+        for target in self.targets:
+            target.reset_polarity()

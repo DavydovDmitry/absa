@@ -7,6 +7,7 @@ printf 'y\n\n' | python -c 'import stanfordnlp; stanfordnlp.download("ru")'
 wget http://vectors.nlpl.eu/repository/20/185.zip -P ./embeddings/
 unzip embeddings/185.zip -d embeddings/tayga_upos_skipgram_300_2_2019
 rm embeddings/185.zip
+rm embeddings/README
 
 # Download dataset
 mkdir ./datasets/SemEval2016/

@@ -6,7 +6,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from gensim.models import KeyedVectors
 import numpy as np
 
-from src.target.miner import TargetMiner
+from src.deprecated.target.miner import TargetMiner
 from src.review.parsed_sentence import ParsedSentence
 from ..score.optimal_parameter import analyse_parameter
 from ..score.metrics import print_sb12
