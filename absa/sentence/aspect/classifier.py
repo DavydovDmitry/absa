@@ -154,7 +154,7 @@ class AspectClassifier:
 
             # todo: logging
 
-        if verbose:
+        if verbose and (val_sentences is not None):
             for epoch in range(num_epoch):
                 epoch_step()
         else:

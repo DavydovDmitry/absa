@@ -147,7 +147,7 @@ class AspectClassifier:
                 train_loss_history.append(train_loss)
                 val_f1_history.append(val_f1)
 
-        if verbose:
+        if verbose and (val_sentences is not None):
             for epoch in range(num_epoch):
                 epoch_step()
         else:

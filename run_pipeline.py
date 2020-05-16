@@ -66,7 +66,7 @@ def target_aspect_classification(
         pred_test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
     # classifier = TargetAspectClassifier.load_model()
     classifier = TargetAspectClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+    classifier.fit(train_sentences=train_sentences)
 
     test_sentences_pred = classifier.predict(pred_test_sentences)
     logging.info(
@@ -80,7 +80,7 @@ def target_polarity_classification(
         test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
     # classifier = PolarityClassifier.load_model()
     classifier = PolarityClassifier(word2vec=word2vec)
-    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+    classifier.fit(train_sentences=train_sentences)
 
     test_sentences_pred = copy.deepcopy(test_sentences)
     for sentence in test_sentences_pred:
