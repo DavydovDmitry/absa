@@ -2,7 +2,7 @@ from typing import List, Dict
 import logging
 import time
 import copy
-from functools import reduce
+import sys
 
 import torch as th
 import torch.nn.functional as F
@@ -10,8 +10,9 @@ import numpy as np
 from sklearn import metrics
 from gensim.models import KeyedVectors
 from frozendict import frozendict
+from tqdm import tqdm
 
-from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path
+from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
 from absa.review.parsed_sentence import ParsedSentence
 from absa.review.target import Polarity
 from .loader import DataLoader, Batch
@@ -32,15 +33,15 @@ class PolarityClassifier:
         matrix of pretrained embeddings
     """
     def __init__(self,
-                 word2vec: KeyedVectors = ...,
-                 vocabulary: Dict[str, int] = ...,
-                 emb_matrix: th.Tensor = ...,
-                 batch_size=100):
+                 word2vec: KeyedVectors = None,
+                 vocabulary: Dict[str, int] = None,
+                 emb_matrix: th.Tensor = None,
+                 batch_size: int = 100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
         # prepare vocabulary and embeddings
-        if isinstance(word2vec, KeyedVectors):
+        if word2vec is not None:
             self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
             emb_matrix = th.FloatTensor(word2vec.vectors)
         else:
@@ -53,10 +54,6 @@ class PolarityClassifier:
                                            num_class=len(Polarity))
             except RuntimeError as e:
                 if 'out of memory' in str(e):
-                    # todo: handle
-                    # for p in self.model.parameters():
-                    #     if p.grad is not None:
-                    #         del p.grad
                     th.cuda.empty_cache()
             else:
                 break
@@ -86,16 +83,14 @@ class PolarityClassifier:
             save_state=True):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if verbose:
-            logging.info(
-                f'Number of parameters: {sum((reduce(lambda x, y: x * y, p.shape)) for p in parameters)}'
-            )
         optimizer = optimizer_class(parameters, **optimizer_params)
 
         train_batches = DataLoader(sentences=train_sentences,
                                    batch_size=self.batch_size,
                                    vocabulary=self.vocabulary,
                                    device=self.device)
+        train_acc_history, train_loss_history = [], []
+
         if val_sentences:
             val_batches = DataLoader(sentences=val_sentences,
                                      batch_size=self.batch_size,
@@ -103,9 +98,7 @@ class PolarityClassifier:
                                      device=self.device)
             val_acc_history, val_loss_history, f1_history = [], [], []
 
-        train_acc_history, train_loss_history = [], []
-
-        for epoch in range(num_epoch):
+        def epoch_step():
             # Train
             start_time = time.process_time()
             train_len = len(train_batches)
@@ -150,12 +143,21 @@ class PolarityClassifier:
                                  f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
                                  f'acc: {train_acc:.{SCORE_DECIMAL_LEN}f}')
                     logging.info(f'Validation ' +
-                                 f'loss: {(val_loss/val_len):.{SCORE_DECIMAL_LEN}f}| ' +
+                                 f'loss: {(val_loss / val_len):.{SCORE_DECIMAL_LEN}f}| ' +
                                  f'acc: {val_acc:.{SCORE_DECIMAL_LEN}f}| ' +
                                  f'f1_score: {f1_score:.{SCORE_DECIMAL_LEN}f}')
-
             train_acc_history.append(train_acc)
             train_loss_history.append(train_loss)
+
+        if verbose and (val_sentences is not None):
+            for epoch in range(num_epoch):
+                epoch_step()
+        else:
+            with tqdm(total=num_epoch, ncols=PROGRESSBAR_COLUMNS_NUM,
+                      file=sys.stdout) as progress_bar:
+                for epoch in range(num_epoch):
+                    epoch_step()
+                    progress_bar.update(1)
 
         if save_state:
             self.save_model()
