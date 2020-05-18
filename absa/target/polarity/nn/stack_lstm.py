@@ -2,10 +2,9 @@ from typing import Tuple
 
 import torch as th
 import torch.nn as nn
-from torch.autograd import Variable
 import dgl
 
-from .tree_lstm import ChildSumTreeLSTMCell
+from .tree_lstm import TreeLSTM
 
 
 class StackLSTM(nn.Module):
@@ -24,14 +23,12 @@ class StackLSTM(nn.Module):
                  rnn_dropout=0.1):
         super(StackLSTM, self).__init__()
         self.device = device
+        self.rnn_layers = rnn_layers  # number of lstm layers
+        self.bidirectional = True  # use bi lstm
 
         self.embed = nn.Embedding(*emb_matrix.shape)
         self.embed.weight = nn.Parameter(emb_matrix.to(device), requires_grad=False)
-
-        self.rnn_hidden = rnn_dim  # rnn out dim
-        self.rnn_layers = rnn_layers  # number of lstm layers
-        self.mem_dim = out_dim  # tree lstm out dim
-        self.bidirectional = True  # use bi lstm
+        self.in_drop = nn.Dropout(input_dropout)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=self.embed.embedding_dim,
@@ -39,39 +36,21 @@ class StackLSTM(nn.Module):
                            num_layers=self.rnn_layers,
                            batch_first=True,
                            bidirectional=self.bidirectional)
+        self.rnn_drop = nn.Dropout(rnn_dropout)
 
         # tree lstm layer
         input_dim = rnn_dim * 2 if self.bidirectional else rnn_dim
-        self.tree_lstm = ChildSumTreeLSTMCell(input_dim, out_dim)
-        self.tree_lstm_hidden = nn.Linear(input_dim, out_dim)
-
-        self.in_drop = nn.Dropout(input_dropout)
-        self.rnn_drop = nn.Dropout(rnn_dropout)
+        self.tree_lstm = TreeLSTM(input_dim=input_dim, output_dim=out_dim, device=self.device)
 
     def forward(self, graph: dgl.DGLGraph, embed_ids: th.Tensor,
                 sentence_len: th.Tensor) -> th.Tensor:
-        embeds = self.embed(embed_ids)
-        embeds = self.in_drop(embeds)
-
-        # rnn layer
+        embeds = self.in_drop(self.embed(embed_ids))
         h = self.rnn_drop(self.encode_with_rnn(rnn_inputs=embeds, sentence_len=sentence_len))
-
-        # tree lstm layer
-        g = graph
-        g.register_message_func(self.tree_lstm.message_func)
-        g.register_reduce_func(self.tree_lstm.reduce_func)
-        g.register_apply_node_func(self.tree_lstm.apply_node_func)
-        g.ndata['iou'] = self.tree_lstm.W_iou(h)
-        g.ndata['h'] = self.tree_lstm_hidden(h)
-        g.ndata['c'] = Variable(th.zeros((graph.number_of_nodes(), self.mem_dim),
-                                         dtype=th.float32),
-                                requires_grad=False).to(self.device)
-        dgl.prop_nodes_topo(g)
-
-        return g.ndata.pop('h')
+        return self.tree_lstm(rnn_inputs=h, graph=graph)
 
     def encode_with_rnn(self, rnn_inputs: th.Tensor, sentence_len: th.Tensor) -> th.Tensor:
-        """Encode batch with LSTM
+        """Encode batch with LSTM.
+
         Can highlight such stages:
         - pack batch sequence
         - encode packed sequences with LSTM
@@ -96,9 +75,11 @@ class StackLSTM(nn.Module):
         """
         def rnn_zero_state() -> Tuple[th.Tensor, th.Tensor]:
             total_layers = self.rnn_layers * 2 if self.bidirectional else self.num_layers
-            state_shape = (total_layers, rnn_inputs.size(0), self.rnn_hidden)
-            h0 = Variable(th.zeros(*state_shape, dtype=th.float32), requires_grad=False)
-            c0 = Variable(th.zeros(*state_shape, dtype=th.float32), requires_grad=False)
+            state_shape = (total_layers, rnn_inputs.size(0), self.rnn.hidden_size)
+            h0 = th.autograd.Variable(th.zeros(*state_shape, dtype=th.float32),
+                                      requires_grad=False)
+            c0 = th.autograd.Variable(th.zeros(*state_shape, dtype=th.float32),
+                                      requires_grad=False)
             return h0.to(self.device), c0.to(self.device)
 
         h0, c0 = rnn_zero_state()

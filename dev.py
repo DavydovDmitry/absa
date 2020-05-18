@@ -69,9 +69,9 @@ def sentence_aspect_classification(
 def target_aspect_classification(
         train_sentences: List[ParsedSentence], test_sentences: List[ParsedSentence],
         pred_test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
-    classifier = TargetAspectClassifier.load_model()
-    # classifier = TargetAspectClassifier(word2vec=word2vec)
-    # classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+    # classifier = TargetAspectClassifier.load_model()
+    classifier = TargetAspectClassifier(word2vec=word2vec)
+    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
 
     test_sentences_pred = classifier.predict(pred_test_sentences)
     logging.info(
@@ -115,10 +115,10 @@ if __name__ == "__main__":
     test_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path + TEST_APPENDIX)
     test_sentences = [x for x in reduce(lambda x, y: x + y, test_reviews)]
 
-    pred_test_sentences = sentence_aspect_classification(train_sentences=train_sentences,
-                                                         test_sentences=test_sentences)
-    target_aspect_classification(train_sentences=train_sentences,
-                                 test_sentences=test_sentences,
-                                 pred_test_sentences=pred_test_sentences)
-    # target_polarity_classification(train_sentences=train_sentences,
-    #                                test_sentences=test_sentences)
+    # pred_test_sentences = sentence_aspect_classification(train_sentences=train_sentences,
+    #                                                      test_sentences=test_sentences)
+    # target_aspect_classification(train_sentences=train_sentences,
+    #                              test_sentences=test_sentences,
+    #                              pred_test_sentences=pred_test_sentences)
+    target_polarity_classification(train_sentences=train_sentences,
+                                   test_sentences=test_sentences)
