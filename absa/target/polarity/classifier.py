@@ -60,10 +60,10 @@ class PolarityClassifier:
 
     def batch_metrics(self, batch: Batch):
         """Make a forward step and return metrics"""
-        logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                         graph=batch.graph,
-                                         target_mask=batch.target_mask,
-                                         sentence_len=batch.sentence_len)
+        logits = self.model(embed_ids=batch.embed_ids,
+                            graph=batch.graph,
+                            target_mask=batch.target_mask,
+                            sentence_len=batch.sentence_len)
         loss = F.cross_entropy(logits, batch.polarity, reduction='mean')
         corrects = (th.max(logits, 1)[1].view(
             batch.polarity.size()).data == batch.polarity.data).sum()
@@ -185,10 +185,10 @@ class PolarityClassifier:
                              vocabulary=self.vocabulary,
                              device=self.device)
         for batch_index, batch in enumerate(batches):
-            logits, gcn_outputs = self.model(embed_ids=batch.embed_ids,
-                                             graph=batch.graph,
-                                             target_mask=batch.target_mask,
-                                             sentence_len=batch.sentence_len)
+            logits = self.model(embed_ids=batch.embed_ids,
+                                graph=batch.graph,
+                                target_mask=batch.target_mask,
+                                sentence_len=batch.sentence_len)
             pred_labels = np.argmax(logits.data.numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):
                 sentence_index = batch.sentence_index[item_index]

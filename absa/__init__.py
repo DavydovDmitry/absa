@@ -22,7 +22,7 @@ embeddings_path = os.path.join(module_path, 'embeddings')
 word2vec_model_path = os.path.join(embeddings_path, 'tayga_upos_skipgram_300_2_2019',
                                    'model.bin')
 
-images_path = os.path.join(module_path, 'images')
+images_path = os.path.join(module_path, 'analysis', 'images')
 log_path = os.path.join(module_path, 'logs')
 
 # --------------------------------- Dumps -------------------------------------

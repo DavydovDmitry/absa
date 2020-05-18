@@ -1,5 +1,6 @@
 import torch as th
 import torch.nn as nn
+import dgl
 
 
 class ChildSumTreeLSTMCell(nn.Module):
@@ -26,3 +27,27 @@ class ChildSumTreeLSTMCell(nn.Module):
         c = i * u + nodes.data['c']
         h = o * th.tanh(c)
         return {'h': h, 'c': c}
+
+
+class TreeLSTM(nn.Module):
+    def __init__(self, input_dim: int, output_dim: int, device: th.device):
+        super(TreeLSTM, self).__init__()
+        self.device = device
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.tree_lstm = ChildSumTreeLSTMCell(self.input_dim, self.output_dim)
+        self.linear = nn.Linear(input_dim, output_dim)
+
+    def forward(self, rnn_inputs: th.Tensor, graph: dgl.DGLGraph):
+        g = graph
+        g.register_message_func(self.tree_lstm.message_func)
+        g.register_reduce_func(self.tree_lstm.reduce_func)
+        g.register_apply_node_func(self.tree_lstm.apply_node_func)
+        g.ndata['iou'] = self.tree_lstm.W_iou(rnn_inputs)
+        g.ndata['h'] = self.linear(rnn_inputs)
+        g.ndata['c'] = th.autograd.Variable(th.zeros(
+            (graph.number_of_nodes(), self.output_dim), dtype=th.float32),
+                                            requires_grad=False).to(self.device)
+        dgl.prop_nodes_topo(g)
+
+        return g.ndata.pop('h')

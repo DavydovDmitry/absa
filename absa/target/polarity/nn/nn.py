@@ -30,7 +30,7 @@ class NeurelNetwork(nn.Module):
         self.classifier = nn.Linear(tree_lstm_dim, num_class)
 
     def forward(self, embed_ids: th.Tensor, graph: dgl.DGLGraph, target_mask: th.Tensor,
-                sentence_len: th.Tensor) -> Tuple[th.Tensor, th.Tensor]:
+                sentence_len: th.Tensor) -> th.Tensor:
         """Forward step.
 
         Return
@@ -51,4 +51,4 @@ class NeurelNetwork(nn.Module):
 
         # make predictions for every class
         logits = self.classifier(outputs)
-        return logits, outputs
+        return logits
