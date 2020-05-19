@@ -5,7 +5,7 @@ import torch as th
 import dgl
 
 from absa import UNKNOWN_WORD, PAD_WORD
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.parsed.sentence import ParsedSentence
 
 Batch = namedtuple(
     'Batch',

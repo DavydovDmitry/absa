@@ -17,8 +17,8 @@ from typing_extensions import TypedDict
 
 from absa import labeled_reviews_dump_path
 from absa import EXTENDED_POLARITIES
-from absa.review.review import Review
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.raw.review import Review
+from absa.review.parsed.sentence import ParsedSentence
 
 NODE_SIZE = 500
 ARROW_COLOR = '#e0e0e0'

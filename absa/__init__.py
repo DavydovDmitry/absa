@@ -29,9 +29,9 @@ log_path = os.path.join(module_path, 'logs')
 dumps_path = os.path.join(module_path, 'dumps')
 
 # Processed data
+reviews_dump_path = os.path.join(dumps_path, 'reviews')
 checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')
 parsed_reviews_dump_path = os.path.join(dumps_path, 'dep_parsed_sentence')
-labeled_reviews_dump_path = os.path.join(dumps_path, 'labeled_reviews')
 
 # classifiers
 sentence_aspect_classifier_dump_path = os.path.join(dumps_path,

@@ -13,7 +13,7 @@ from frozendict import frozendict
 from tqdm import tqdm
 
 from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.parsed.sentence import ParsedSentence
 from absa.review.target import Polarity
 from .loader import DataLoader, Batch
 from .nn.nn import NeurelNetwork

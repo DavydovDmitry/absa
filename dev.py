@@ -17,11 +17,10 @@ from absa import TEST_APPENDIX, log_path
 from absa.preprocess.dep_parse import load_parsed_reviews
 from absa import parsed_reviews_dump_path
 from absa.utils.embedding import get_embeddings
-from absa.preprocess.pipeline import preprocess_pipeline
 from absa.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
 from absa.target.aspect.classifier import AspectClassifier as TargetAspectClassifier
 from absa.target.polarity.classifier import PolarityClassifier
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.parsed.sentence import ParsedSentence
 
 SEED = 42
 

@@ -13,7 +13,7 @@ from sklearn.metrics import f1_score
 from tqdm import tqdm
 
 from absa import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.parsed.sentence import ParsedSentence
 from absa.review.target import Target
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS

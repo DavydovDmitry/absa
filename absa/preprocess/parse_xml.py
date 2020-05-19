@@ -1,10 +1,5 @@
-"""Module for reviews representation
-
-Also function `get_reviews` create Review instances from xml.
-Assuming that xml have a structure...
-"""
-
 import xml
+from xml.etree import ElementTree
 import re
 from typing import List
 import logging
@@ -13,28 +8,18 @@ import sys
 
 from gensim.models import KeyedVectors
 from tqdm import tqdm
-from .sentence import Sentence
-from .target import Target
+
+from absa.review.raw.review import Review
+from absa.review.raw.sentence import Sentence
+from absa.review.target import Target
 from absa import PROGRESSBAR_COLUMNS_NUM
 
 
-class Review:
-    def __init__(self, sentences: List[Sentence]):
-        self.sentences = sentences
-
-    def __repr__(self):
-        nl = '\n'
-        return f'{f"{nl}".join(map(lambda x : str(x), self.sentences))}'
-
-    def display(self):
-        """Color print of review."""
-
-        for sentence in self.sentences:
-            sentence.display()
-            print(end=' ')
-
-    def get_normalized(self) -> 'Review':
-        return Review(sentences=[sentence.get_normalized() for sentence in self.sentences])
+def parse_xml(word2vec: KeyedVectors, pathway: str) -> List[Review]:
+    tree = ElementTree.parse(pathway)
+    root = tree.getroot()
+    initial_reviews = get_reviews(root, word2vec)
+    return [x.get_normalized() for x in initial_reviews]
 
 
 def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> List[Review]:
@@ -96,7 +81,7 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
     return reviews
 
 
-def dump_reviews(reviews: List[Review], file_pathway):
+def dump_reviews(reviews: List[Review], file_pathway: str):
     with open(file_pathway, 'wb') as f:
         pickle.dump(reviews, f)
     logging.info('Make a dump of reviews.')

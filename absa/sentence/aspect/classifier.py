@@ -1,6 +1,4 @@
 from typing import List, Dict, Union, Tuple
-import logging
-import time
 import copy
 import sys
 from dataclasses import dataclass
@@ -12,8 +10,8 @@ from frozendict import frozendict
 from scipy.optimize import minimize as minimize
 from tqdm import tqdm
 
-from absa import sentence_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed_sentence import ParsedSentence
+from absa import sentence_aspect_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
+from absa.review.parsed.sentence import ParsedSentence
 from absa.review.target import Target
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork

@@ -11,7 +11,7 @@ import requests
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.review import Review
+from absa.review.raw.review import Review
 
 
 def split_text(text: List[str], line_length=300) -> List[List[str]]:

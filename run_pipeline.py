@@ -16,7 +16,7 @@ from absa.preprocess.pipeline import preprocess_pipeline
 from absa.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
 from absa.target.aspect.classifier import AspectClassifier as TargetAspectClassifier
 from absa.target.polarity.classifier import PolarityClassifier
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.parsed.sentence import ParsedSentence
 
 SEED = 42
 

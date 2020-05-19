@@ -2,7 +2,7 @@ from typing import List
 
 from termcolor import colored
 
-from .target import Target
+from absa.review.target import Target
 
 
 class Sentence:

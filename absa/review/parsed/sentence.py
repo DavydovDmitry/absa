@@ -2,22 +2,31 @@ from typing import List, Dict
 
 import networkx as nx
 
-from .review import Sentence, Target
+from ..raw.sentence import Sentence
+from ..target import Target
 
 
 class ParsedSentence:
+    """
+    Attributes
+    ----------
+    graph ; nx.DiGraph
+        dependency tree of sentence
+    id2word : dict
+        token and it's index (all tokens)
+    id2lemma : dict
+        node of dependency tree and it's index
+    """
     def __init__(self, graph: nx.DiGraph, id2word: Dict[int, str], id2lemma: Dict[int, str],
                  id2dep: Dict[int, str], id2prev_id: Dict[int, int], targets: List[Target]):
         self.graph = graph
         self.id2word = id2word
         self.id2lemma = id2lemma
         self.id2dep = id2dep
-
-        # backward compatibility
-        self.id2prev_id = id2prev_id
         self.targets = targets
+        self.id2prev_id = id2prev_id  # backward compatibility
 
-    def get_sentence_order(self):
+    def get_sentence_order(self) -> List[int]:
         return [
             node_id for node_id, _ in sorted(self.id2prev_id.items(), key=lambda item: item[1])
             if node_id in self.id2lemma

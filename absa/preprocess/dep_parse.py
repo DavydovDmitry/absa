@@ -9,8 +9,8 @@ import stanfordnlp
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.review import Review, Target
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.raw.review import Review, Target
+from absa.review.parsed.sentence import ParsedSentence
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
