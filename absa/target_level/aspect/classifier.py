@@ -199,7 +199,7 @@ class AspectClassifier:
                 sentence_len=[x.item() for x in batch.sentence_len.to('cpu')])
             for internal_index, targets in enumerate(pred_sentences_targets):
                 sentence_index = batch.sentence_index[internal_index]
-                sentence_nodes = sentences[sentence_index].get_sentence_order()
+                sentence_nodes = sentences[sentence_index].nodes_sentence_order()
 
                 explicit_targets = []
                 explicit_categories = set()

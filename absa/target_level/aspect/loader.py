@@ -65,7 +65,7 @@ class DataLoader:
         """
 
         embed_ids = []
-        for word in sentence.get_sentence_order():
+        for word in sentence.nodes_sentence_order():
             if word in sentence.id2lemma:
                 if sentence.id2lemma[word] in self.vocabulary:
                     embed_ids.append(self.vocabulary[sentence.id2lemma[word]])
@@ -82,7 +82,7 @@ class DataLoader:
                 # todo:
                 # labels[:, np.where(self.aspect_labels == target.category)] = 1.0
             else:
-                for word_index, word in enumerate(sentence.get_sentence_order()):
+                for word_index, word in enumerate(sentence.nodes_sentence_order()):
                     if word in target.nodes:
                         labels[word_index] = self.aspect_labels.get_index(target.category)
 
