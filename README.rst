@@ -1,6 +1,7 @@
 *****
 ABSA
 *****
+
 This is pipeline for aspect-based sentiment analysis.
 
 ----------
@@ -64,6 +65,9 @@ in `absa/__init__.py <https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/_
 ------
 Essential stages
 ------
+
+::
+
 
                   |
     +-------------------------------------- Preprocess pipeline ---------------+
