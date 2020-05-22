@@ -15,7 +15,7 @@ class MetaNLPPipeline:
             try:
                 self._nlp = stanfordnlp.Pipeline(lang='ru', )
             except RuntimeError:
-                time.sleep(5)
+                time.sleep(1)
             else:
                 break
         warnings.filterwarnings("ignore", category=UserWarning)

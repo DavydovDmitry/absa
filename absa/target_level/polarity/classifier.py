@@ -8,7 +8,6 @@ import torch as th
 import torch.nn.functional as F
 import numpy as np
 from sklearn import metrics
-from gensim.models import KeyedVectors
 from frozendict import frozendict
 from tqdm import tqdm
 
@@ -33,7 +32,8 @@ class PolarityClassifier:
                  vocabulary: Dict[str, int] = None,
                  emb_matrix: th.Tensor = None,
                  batch_size: int = 100):
-        self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
+        # self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
+        self.device = th.device('cpu')
         self.batch_size = batch_size
 
         self.vocabulary = vocabulary
@@ -41,7 +41,7 @@ class PolarityClassifier:
             try:
                 self.model = NeurelNetwork(emb_matrix=emb_matrix,
                                            device=self.device,
-                                           num_class=len(Polarity))
+                                           num_class=Polarity.__len__())
             except RuntimeError as e:
                 if 'out of memory' in str(e):
                     th.cuda.empty_cache()
@@ -90,7 +90,7 @@ class PolarityClassifier:
 
         def epoch_step():
             # Train
-            start_time = time.process_time()
+            start_time = time.time()
             train_len = len(train_batches)
             self.model.train()
             train_loss, train_acc = 0., 0.
@@ -127,8 +127,7 @@ class PolarityClassifier:
 
                 if verbose:
                     logging.info('-' * 40 + f' Epoch {epoch:03d} ' + '-' * 40)
-                    logging.info(
-                        f'Elapsed time: {(time.process_time() - start_time):.{3}f} sec')
+                    logging.info(f'Elapsed time: {(time.time() - start_time):.{3}f} sec')
                     logging.info(f'Train      ' +
                                  f'loss: {train_loss:.{SCORE_DECIMAL_LEN}f}| ' +
                                  f'acc: {train_acc:.{SCORE_DECIMAL_LEN}f}')
@@ -205,17 +204,20 @@ class PolarityClassifier:
 
     @staticmethod
     def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]) -> float:
-        """
-            Check targets polarity.
+        """Accuracy of predictions
+
+        Returns
+        -------
+        accuracy : float
+            ratio of correct polarities prediction to total predictions
         """
         correct_predictions = 0
         total_predictions = 0
 
         for s_index, (s, s_pred) in enumerate(zip(sentences, sentences_pred)):
-            if len(s.targets) != len(s_pred.targets) or len(
-                    set(hash(t) for t in s.targets) & (set(hash(t)
-                                                           for t in s_pred.targets))) != len(
-                                                               s.targets):
+            if (len(s.targets) != len(s_pred.targets)) or \
+               (len(set(hash(t) for t in s.targets) &
+                    set(hash(t) for t in s_pred.targets)) != len(s.targets)):
                 print(len(set(s.targets).intersection(set(s_pred.targets))))
 
                 logging.error('-' * 50 + ' Original  targets ' + '-' * 50)

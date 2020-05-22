@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import torch as th
 import dgl
+import networkx as nx
 
 from absa import UNKNOWN_WORD, PAD_WORD
 from absa.review.parsed.sentence import ParsedSentence
@@ -83,6 +84,9 @@ class DataLoader:
 
         graph = dgl.DGLGraph()
         graph.from_networkx(sentence.graph)
+        # todo:
+        if [x for x in nx.simple_cycles(sentence.graph)]:
+            raise ValueError('CYCLE!!!')
 
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:

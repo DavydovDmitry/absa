@@ -64,9 +64,9 @@ def dep_parse_reviews(reviews: List[Review],
                     sentence_text = sentence.get_text()
                     docs = nlp(sentence_text).sentences
                     start = 0
-                    token_index = -1
+                    token_index = 0
                     for doc in docs:
-                        total_token_index = token_index + 1
+                        total_token_index = token_index
                         for token in doc.tokens:
                             token_index = total_token_index + int(token.index)
                             word = token.words[0]
@@ -87,10 +87,11 @@ def dep_parse_reviews(reviews: List[Review],
                             id2dep[token_index] = word.dependency_relation
 
                         for token in doc.tokens:
-                            token_index = total_token_index + int(token.index)
                             word = token.words[0]
-                            if (token_index in graph) and (word.governor in graph):
-                                graph.add_edge(token_index, word.governor)
+                            token_index = total_token_index + int(token.index)
+                            governor = total_token_index + word.governor
+                            if (token_index in graph) and (governor in graph):
+                                graph.add_edge(token_index, governor)
 
                         if sentence.targets:
                             for target in sentence.targets:

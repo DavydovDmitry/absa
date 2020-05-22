@@ -1,42 +1,7 @@
 *****
 ABSA
 *****
-This is pipeline for aspect-based sentiment analysis. Essential stages::
-
-
-    +-------------------------------------- Preprocess pipeline ---------------+
-    |             |                                                            |
-    |             V                                                            |
-    |       Upload reviews                                                     |
-    |             |                                                            |
-    |             |     List[Reviews]                                          |
-    |             V                                                            |
-    |         Spell check                                                      |
-    |             |                                                            |
-    |             |     List[Reviews]                                          |
-    |             V                                                            |
-    |      Dependency parsing                                                  |
-    |             |                                                            |
-    +--------------------------------------------------------------------------+
-                  |
-                  V
-    +-------------------------------------- ABSA pipeline ---------------------+
-    |             |                                                            |
-    +-------------------------------------- Aspect Classification -------------+
-    |             V                                                            |
-    | Sentence Level Aspect Classification                                     |
-    |             |                                                            |
-    |             |     List[ParsedSentence]                                   |
-    |             V                                                            |
-    | Target Level Aspect Classification                                       |
-    |             |                                                            |
-    +--------------------------------------------------------------------------+
-    |             |     List[ParsedSentence]                                   |
-    |             V                                                            |
-    |      Polarity Classification                                             |
-    |             |                                                            |
-    |             V                                                            |
-    +--------------------------------------------------------------------------+
+This is pipeline for aspect-based sentiment analysis.
 
 ----------
 Execution
@@ -94,3 +59,46 @@ in `absa/__init__.py <https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/_
     mkdir -p ./datasets/SemEval2016/ &&
     wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1RZUyBrWQ0OwlIsmN0axewKg21koYmgQf' -O ./datasets/SemEval2016/train.xml &&
     wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1JR3gblfNXQHApmDzY4FCCjv_0wVug7dO' -O ./datasets/SemEval2016/test.xml
+
+
+------
+Essential stages
+------
+
+                  |
+    +-------------------------------------- Preprocess pipeline ---------------+
+    |             |                                                            |
+    |             V                                                            |
+    |       Upload reviews                                                     |
+    |             |                                                            |
+    |             |     List[Reviews]                                          |
+    |             V                                                            |
+    |         Spell check                                                      |
+    |             |                                                            |
+    |             |     List[Reviews]                                          |
+    |             V                                                            |
+    |      Dependency parsing                                                  |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
+                  |
+                  V
+                  |
+    +-------------------------------------- ABSA pipeline ---------------------+
+    |             |                                                            |
+    +-------------------------------------- Aspect Classification -------------+
+    |             V                                                            |
+    | Sentence Level Aspect Classification                                     |
+    |             |                                                            |
+    |             |     List[ParsedSentence]                                   |
+    |             V                                                            |
+    | Target Level Aspect Classification                                       |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
+    |             |     List[ParsedSentence]                                   |
+    |             V                                                            |
+    |      Polarity Classification                                             |
+    |             |                                                            |
+    |             |                                                            |
+    +--------------------------------------------------------------------------+
+                  |
+                  V

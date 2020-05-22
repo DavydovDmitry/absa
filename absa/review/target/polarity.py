@@ -1,20 +1,20 @@
-from typing import List, Union
-from enum import Enum
+from typing import Union
+from enum import IntEnum
 
 
-class Polarity(Enum):
+class Polarity(IntEnum):
     negative = 0
     neutral = 1
     positive = 2
 
     @classmethod
-    def is_polarity_name(cls, polarity: str):
+    def is_polarity_name(cls, polarity: str) -> bool:
         if polarity in cls.__members__:
             return True
         return False
 
     @classmethod
-    def get_polarity(cls, polarity: Union['Polarity', str, int]):
+    def get_polarity(cls, polarity: Union['Polarity', str, int]) -> 'Polarity':
         if isinstance(polarity, Polarity):
             return polarity
 
@@ -29,6 +29,10 @@ class Polarity(Enum):
             if match:
                 return match[0]
         return DEFAULT_POLARITY
+
+    @classmethod
+    def __len__(cls) -> int:
+        return len(cls._member_names_)
 
 
 DEFAULT_POLARITY = Polarity.neutral

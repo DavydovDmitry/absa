@@ -14,9 +14,9 @@ import numpy as np
 import torch as th
 
 from absa import TEST_APPENDIX, log_path
-from absa.preprocess.dep_parse import load_parsed_reviews
 from absa import parsed_reviews_dump_path
 from absa.utils.embedding import Embeddings
+from absa.utils.dump import load_dump
 from absa.preprocess.pipeline import preprocess_pipeline
 from absa.sentence_level.aspect.classifier import AspectClassifier as SentenceAspectClassifier
 from absa.target_level.aspect.classifier import AspectClassifier as TargetAspectClassifier
@@ -107,13 +107,13 @@ if __name__ == "__main__":
     vocabulary = Embeddings.vocabulary
     emb_matrix = Embeddings.embeddings_matrix
 
-    # preprocess_pipeline(vocabulary=vocabulary, is_train=True)
-    # preprocess_pipeline(vocabulary=vocabulary, is_train=False)
+    preprocess_pipeline(vocabulary=vocabulary, is_train=True, skip_spell_check=False)
+    preprocess_pipeline(vocabulary=vocabulary, is_train=False, skip_spell_check=False)
 
-    train_reviews = load_parsed_reviews(pathway=parsed_reviews_dump_path)
+    train_reviews = load_dump(pathway=parsed_reviews_dump_path)
     train_sentences = [x for x in reduce(lambda x, y: x + y, train_reviews)]
 
-    test_reviews = load_parsed_reviews(pathway=parsed_reviews_dump_path + TEST_APPENDIX)
+    test_reviews = load_dump(pathway=parsed_reviews_dump_path + TEST_APPENDIX)
     test_sentences = [x for x in reduce(lambda x, y: x + y, test_reviews)]
 
     # pred_test_sentences = sentence_aspect_classification(train_sentences=train_sentences,

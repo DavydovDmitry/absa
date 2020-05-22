@@ -5,9 +5,6 @@ import datetime
 import os
 import copy
 
-import numpy as np
-import torch as th
-
 from absa import TEST_APPENDIX, log_path
 from absa import parsed_reviews_dump_path
 from absa.utils.embedding import Embeddings
@@ -94,10 +91,6 @@ def target_polarity_classification(
 
 
 if __name__ == "__main__":
-    np.random.seed(SEED)
-    th.manual_seed(SEED)
-    th.cuda.manual_seed(SEED)
-
     configure_logging()
     vocabulary = Embeddings.vocabulary
     emb_matrix = Embeddings.embeddings_matrix
