@@ -107,8 +107,8 @@ if __name__ == "__main__":
     vocabulary = Embeddings.vocabulary
     emb_matrix = Embeddings.embeddings_matrix
 
-    preprocess_pipeline(vocabulary=vocabulary, is_train=True)
-    preprocess_pipeline(vocabulary=vocabulary, is_train=False)
+    # preprocess_pipeline(vocabulary=vocabulary, is_train=True)
+    # preprocess_pipeline(vocabulary=vocabulary, is_train=False)
 
     train_reviews = load_parsed_reviews(pathway=parsed_reviews_dump_path)
     train_sentences = [x for x in reduce(lambda x, y: x + y, train_reviews)]

@@ -45,6 +45,16 @@ class ParsedSentence(TargetMixin):
         # backward compatibility
         self.id2init_id = id2init_id
 
+    def __len__(self):
+        """Number of parsed tokens
+
+        According to number of nodes in dependency tree"""
+        return len(self.graph)
+
+    def is_known(self, word_index: int) -> bool:
+        """Is word with that index in known words"""
+        return word_index in self.id2lemma
+
     def nodes_sentence_order(self) -> List[int]:
         """Nodes indexes in sentence order
         
@@ -58,6 +68,22 @@ class ParsedSentence(TargetMixin):
             node_id for node_id, _ in sorted(self.id2init_id.items(), key=lambda item: item[1])
             if node_id in self.id2lemma
         ]
+
+    def reset_targets(self):
+        """Reset list of targets"""
+        self.targets = []
+
+    def reset_targets_polarities(self):
+        """Reset only polarities of targets"""
+        for target in self.targets:
+            target.reset_polarity()
+
+    def is_targets_contain_unknown(self) -> bool:
+        for target in self.targets:
+            for node in target.nodes:
+                if not self.is_known(node):
+                    return False
+        return True
 
     def to_sentence(self) -> Sentence:
         """Convert to instance of Sentence class
@@ -101,18 +127,3 @@ class ParsedSentence(TargetMixin):
                     Target(nodes=nodes, category=target.category, polarity=target.polarity))
 
         return Sentence(text=text, targets=targets)
-
-    def __len__(self):
-        """Number of parsed tokens
-
-        According to number of nodes in dependency tree"""
-        return len(self.graph)
-
-    def reset_targets(self):
-        """Reset list of targets"""
-        self.targets = []
-
-    def reset_targets_polarities(self):
-        """Reset only polarities of targets"""
-        for target in self.targets:
-            target.reset_polarity()

@@ -1,7 +1,6 @@
 from typing import List
 import re
 import logging
-import pickle
 import sys
 
 import networkx as nx
@@ -118,17 +117,4 @@ def dep_parse_reviews(reviews: List[Review],
             parsed_reviews.append(parsed_sentences)
             progress_bar.update(1)
     logging.info('Dependency parsing is complete.')
-    return parsed_reviews
-
-
-def dump_parsed_reviews(reviews: List[List[ParsedSentence]], pathway: str):
-    with open(pathway, 'wb') as f:
-        pickle.dump(reviews, f)
-    logging.info('Make a dump of dependency trees.')
-
-
-def load_parsed_reviews(pathway: str) -> List[List[ParsedSentence]]:
-    with open(pathway, 'rb') as f:
-        parsed_reviews = pickle.load(f)
-    logging.info('Upload dependency trees from dump.')
     return parsed_reviews

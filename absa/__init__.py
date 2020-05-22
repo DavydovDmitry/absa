@@ -29,6 +29,9 @@ log_path = os.path.join(module_path, 'logs')
 # --------------------------------- Dumps -------------------------------------
 dumps_path = os.path.join(module_path, 'dumps')
 
+vocabulary_dump = os.path.join(dumps_path, 'vocabulary')
+embed_matrix_path = os.path.join(dumps_path, 'embed_matrix')
+
 # Processed data
 raw_reviews_dump_path = os.path.join(dumps_path, 'reviews')
 checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')

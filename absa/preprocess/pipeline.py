@@ -3,10 +3,11 @@ from typing import Dict
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
     parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path
-from .parse_xml import parse_xml, load_reviews, dump_reviews
-from .spell_check import spell_check, load_checked_reviews, dump_checked_reviews
-from .dep_parse import dep_parse_reviews, load_parsed_reviews, dump_parsed_reviews
+from .parse_xml import parse_xml
+from .spell_check import spell_check
+from .dep_parse import dep_parse_reviews
 from ..utils.nlp import NLPPipeline
+from ..utils.dump import make_dump, load_dump
 
 
 def preprocess_pipeline(vocabulary: Dict = None,
@@ -55,7 +56,7 @@ def preprocess_pipeline(vocabulary: Dict = None,
 
     # Parse reviews
     if os.path.isfile(raw_reviews_dump_path + appendix):
-        reviews = load_reviews(raw_reviews_dump_path + appendix)
+        reviews = load_dump(pathway=raw_reviews_dump_path + appendix)
     else:
         if vocabulary is None:
             raise ValueError(
@@ -63,27 +64,26 @@ def preprocess_pipeline(vocabulary: Dict = None,
             )
         reviews = parse_xml(vocabulary=vocabulary, pathway=reviews_path)
         if make_dumps:
-            dump_reviews(reviews, raw_reviews_dump_path + appendix)
+            make_dump(obj=reviews, pathway=raw_reviews_dump_path + appendix)
 
     # Spellcheck
     if not skip_spell_check:
         if os.path.isfile(checked_reviews_dump_path + appendix):
-            reviews, spell_checked2init = load_checked_reviews(
-                file_pathway=checked_reviews_dump_path + appendix)
+            reviews, spell_checked2init = load_dump(pathway=checked_reviews_dump_path +
+                                                    appendix)
         else:
             reviews, spell_checked2init = spell_check(reviews)
             if make_dumps:
-                dump_checked_reviews((reviews, spell_checked2init),
-                                     file_pathway=checked_reviews_dump_path + appendix)
+                make_dump(obj=(reviews, spell_checked2init),
+                          pathway=checked_reviews_dump_path + appendix)
 
     # Dependency parsing
     if os.path.isfile(parsed_reviews_dump_path + appendix):
-        parsed_reviews = load_parsed_reviews(pathway=parsed_reviews_dump_path + appendix)
+        parsed_reviews = load_dump(pathway=parsed_reviews_dump_path + appendix)
     else:
         nlp = NLPPipeline.nlp
         parsed_reviews = dep_parse_reviews(reviews, nlp)
         if make_dumps:
-            dump_parsed_reviews(parsed_reviews,
-                                pathway=parsed_reviews_dump_path + appendix)
+            make_dump(obj=parsed_reviews, pathway=parsed_reviews_dump_path + appendix)
 
     return parsed_reviews

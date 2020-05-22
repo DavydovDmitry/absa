@@ -3,7 +3,6 @@ from xml.etree import ElementTree
 import re
 from typing import List, Dict
 import logging
-import pickle
 import sys
 
 from tqdm import tqdm
@@ -77,17 +76,4 @@ def get_reviews(root: xml.etree.ElementTree.Element, vocabulary: Dict) -> List[R
             reviews.append(Review(sentences))
             progress_bar.update(1)
     logging.info('Reviews parsing is complete.')
-    return reviews
-
-
-def dump_reviews(reviews: List[Review], pathway: str):
-    with open(pathway, 'wb') as f:
-        pickle.dump(reviews, f)
-    logging.info('Make a dump of reviews.')
-
-
-def load_reviews(pathway) -> List[Review]:
-    with open(pathway, 'rb') as f:
-        reviews = pickle.load(f)
-    logging.info('Upload reviews from dump.')
     return reviews
