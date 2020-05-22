@@ -1,28 +1,27 @@
 import xml
 from xml.etree import ElementTree
 import re
-from typing import List
+from typing import List, Dict
 import logging
 import pickle
 import sys
 
-from gensim.models import KeyedVectors
 from tqdm import tqdm
 
 from absa.review.raw.review import Review
 from absa.review.raw.sentence import Sentence
-from absa.review.target import Target
+from absa.review.target.target import Target
 from absa import PROGRESSBAR_COLUMNS_NUM
 
 
-def parse_xml(word2vec: KeyedVectors, pathway: str) -> List[Review]:
+def parse_xml(vocabulary: Dict, pathway: str) -> List[Review]:
     tree = ElementTree.parse(pathway)
     root = tree.getroot()
-    initial_reviews = get_reviews(root, word2vec)
+    initial_reviews = get_reviews(root, vocabulary)
     return [x.get_normalized() for x in initial_reviews]
 
 
-def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> List[Review]:
+def get_reviews(root: xml.etree.ElementTree.Element, vocabulary: Dict) -> List[Review]:
     def _tokenize(text: str) -> List[str]:
         """Get representation of sentence text"""
         tokens = []
@@ -34,7 +33,7 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
                     # check there's is no such word in vocabulary.
                     # words in vocabulary in format lemma_POS
                     # todo: word can be not in canonical form
-                    if not [k for k in word2vec.vocab.keys() if temp == k[:len(temp)]]:
+                    if not [k for k in vocabulary if temp == k[:len(temp)]]:
                         first_token, token = token.split('-', maxsplit=1)
                         tokens.append('-')
                         tokens.append(first_token)
@@ -81,14 +80,14 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
     return reviews
 
 
-def dump_reviews(reviews: List[Review], file_pathway: str):
-    with open(file_pathway, 'wb') as f:
+def dump_reviews(reviews: List[Review], pathway: str):
+    with open(pathway, 'wb') as f:
         pickle.dump(reviews, f)
     logging.info('Make a dump of reviews.')
 
 
-def load_reviews(file_pathway) -> List[Review]:
-    with open(file_pathway, 'rb') as f:
+def load_reviews(pathway) -> List[Review]:
+    with open(pathway, 'rb') as f:
         reviews = pickle.load(f)
     logging.info('Upload reviews from dump.')
     return reviews

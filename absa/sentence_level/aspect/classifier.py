@@ -5,14 +5,13 @@ from dataclasses import dataclass
 
 import torch as th
 import numpy as np
-from gensim.models import KeyedVectors
 from frozendict import frozendict
 from scipy.optimize import minimize as minimize
 from tqdm import tqdm
 
 from absa import sentence_aspect_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
 from absa.review.parsed.sentence import ParsedSentence
-from absa.review.target import Target
+from absa.review.target.target import Target
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
 from absa.labels.labels import Labels
@@ -24,16 +23,12 @@ class AspectClassifier:
 
     Attributes
     ----------
-    word2vec : KeyedVectors
-        Vocabulary and embed_matrix are extracting from word2vec.
-        Otherwise you can pass vocabulary and emb_matrix.
     vocabulary : dict
         dictionary where key is wordlemma_POS value - index in embedding matrix
     emb_matrix : th.Tensor
         matrix of pretrained embeddings
     """
     def __init__(self,
-                 word2vec: KeyedVectors = None,
                  vocabulary: Dict[str, int] = None,
                  emb_matrix: th.Tensor = None,
                  aspect_labels: List[str] = ASPECT_LABELS,
@@ -42,13 +37,7 @@ class AspectClassifier:
         self.batch_size = batch_size
         self.aspect_labels = Labels(labels=aspect_labels)
 
-        # prepare vocabulary and embeddings
-        if word2vec is not None:
-            self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
-            emb_matrix = th.FloatTensor(word2vec.vectors)
-        else:
-            self.vocabulary = vocabulary
-
+        self.vocabulary = vocabulary
         while True:
             try:
                 self.model = NeuralNetwork(emb_matrix=emb_matrix,

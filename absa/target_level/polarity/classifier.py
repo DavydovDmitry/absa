@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
 from absa.review.parsed.sentence import ParsedSentence
-from absa.review.target import Polarity
+from absa.review.target.target import Polarity
 from .loader import DataLoader, Batch
 from .nn.nn import NeurelNetwork
 
@@ -24,29 +24,19 @@ class PolarityClassifier:
 
     Attributes
     ----------
-    word2vec : KeyedVectors
-        Vocabulary and embed_matrix are extracting from word2vec.
-        Otherwise you can pass vocabulary and emb_matrix.
     vocabulary : dict
         dictionary where key is wordlemma_POS value - index in embedding matrix
     emb_matrix : th.Tensor
         matrix of pretrained embeddings
     """
     def __init__(self,
-                 word2vec: KeyedVectors = None,
                  vocabulary: Dict[str, int] = None,
                  emb_matrix: th.Tensor = None,
                  batch_size: int = 100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
 
-        # prepare vocabulary and embeddings
-        if word2vec is not None:
-            self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
-            emb_matrix = th.FloatTensor(word2vec.vectors)
-        else:
-            self.vocabulary = vocabulary
-
+        self.vocabulary = vocabulary
         while True:
             try:
                 self.model = NeurelNetwork(emb_matrix=emb_matrix,

@@ -13,9 +13,9 @@ from absa.preprocess.dep_parse import load_parsed_reviews
 from absa import parsed_reviews_dump_path
 from absa.utils.embedding import get_embeddings
 from absa.preprocess.pipeline import preprocess_pipeline
-from absa.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
-from absa.target.aspect.classifier import AspectClassifier as TargetAspectClassifier
-from absa.target.polarity.classifier import PolarityClassifier
+from absa.sentence_level.aspect.classifier import AspectClassifier as SentenceAspectClassifier
+from absa.target_level.aspect.classifier import AspectClassifier as TargetAspectClassifier
+from absa.target_level.polarity.classifier import PolarityClassifier
 from absa.review.parsed.sentence import ParsedSentence
 
 SEED = 42
@@ -104,10 +104,10 @@ if __name__ == "__main__":
     preprocess_pipeline(word2vec=word2vec, is_train=True)
     preprocess_pipeline(word2vec=word2vec, is_train=False)
 
-    train_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path)
+    train_reviews = load_parsed_reviews(pathway=parsed_reviews_dump_path)
     train_sentences = [x for x in reduce(lambda x, y: x + y, train_reviews)]
 
-    test_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path + TEST_APPENDIX)
+    test_reviews = load_parsed_reviews(pathway=parsed_reviews_dump_path + TEST_APPENDIX)
     test_sentences = [x for x in reduce(lambda x, y: x + y, test_reviews)]
 
     pred_test_sentences = sentence_aspect_classification(train_sentences=train_sentences,

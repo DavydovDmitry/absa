@@ -9,14 +9,15 @@ import stanfordnlp
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.raw.review import Review, Target
+from absa.review.raw.review import Review
+from absa.review.target.target import Target
 from absa.review.parsed.sentence import ParsedSentence
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def parse_reviews(reviews: List[Review],
-                  nlp: stanfordnlp.Pipeline) -> List[List[ParsedSentence]]:
+def dep_parse_reviews(reviews: List[Review],
+                      nlp: stanfordnlp.Pipeline) -> List[List[ParsedSentence]]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -112,7 +113,7 @@ def parse_reviews(reviews: List[Review],
                                    id2word=id2word,
                                    id2lemma=id2lemma,
                                    id2dep=id2dep,
-                                   id2prev_id=id2prev_id,
+                                   id2init_id=id2prev_id,
                                    targets=targets))
             parsed_reviews.append(parsed_sentences)
             progress_bar.update(1)
@@ -120,14 +121,14 @@ def parse_reviews(reviews: List[Review],
     return parsed_reviews
 
 
-def dump_parsed_reviews(parsed_reviews: List[List[ParsedSentence]], file_pathway: str):
-    with open(file_pathway, 'wb') as f:
-        pickle.dump(parsed_reviews, f)
+def dump_parsed_reviews(reviews: List[List[ParsedSentence]], pathway: str):
+    with open(pathway, 'wb') as f:
+        pickle.dump(reviews, f)
     logging.info('Make a dump of dependency trees.')
 
 
-def load_parsed_reviews(file_pathway: str) -> List[List[ParsedSentence]]:
-    with open(file_pathway, 'rb') as f:
+def load_parsed_reviews(pathway: str) -> List[List[ParsedSentence]]:
+    with open(pathway, 'rb') as f:
         parsed_reviews = pickle.load(f)
     logging.info('Upload dependency trees from dump.')
     return parsed_reviews

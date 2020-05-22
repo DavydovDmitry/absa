@@ -7,7 +7,13 @@ from absa import word2vec_model_path
 from absa import UNKNOWN_WORD, PAD_WORD
 
 
-def get_embeddings() -> KeyedVectors:
+def _get_embeddings() -> KeyedVectors:
+    """Load embeddings
+
+    Returns
+    -------
+    word2vec : KeyedVectors
+    """
     word2vec = KeyedVectors.load_word2vec_format(datapath(word2vec_model_path), binary=True)
 
     for word in [UNKNOWN_WORD]:
@@ -23,3 +29,20 @@ def get_embeddings() -> KeyedVectors:
 
     # word2vec.init_sims(replace=True)
     return word2vec
+
+
+class MetaEmbeddings:
+    def __init__(self, *args, **kwargs):
+        self._embeddings = _get_embeddings()
+
+    @property
+    def vocabulary(self):
+        return {w: i for i, w in enumerate(self._embeddings.index2word)}
+
+    @property
+    def embeddings_matrix(self):
+        return th.FloatTensor(self._embeddings.vectors)
+
+
+class Embeddings(metaclass=MetaEmbeddings):
+    pass
