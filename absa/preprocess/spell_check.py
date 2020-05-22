@@ -1,6 +1,5 @@
 from typing import List, Dict, Tuple
 import json
-import pickle
 import time
 import logging
 import sys
@@ -11,7 +10,7 @@ import requests
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.review import Review
+from absa.review.raw.review import Review
 
 
 def split_text(text: List[str], line_length=300) -> List[List[str]]:
@@ -203,16 +202,3 @@ def spell_check(reviews: List[Review],
             progress_bar.update(1)
     logging.info('Spell checking is complete.')
     return reviews, spell_checked2init
-
-
-def dump_checked_reviews(checked_reviews: Tuple[List[Review], List[List[Dict]]], file_pathway):
-    with open(file_pathway, 'wb') as f:
-        pickle.dump(checked_reviews, f)
-    logging.info('Create a dump of checked reviews.')
-
-
-def load_checked_reviews(file_pathway) -> Tuple[List[Review], List[List[Dict]]]:
-    with open(file_pathway, 'rb') as f:
-        checked_reviews = pickle.load(f)
-    logging.info('Upload checked reviews from dump.')
-    return checked_reviews

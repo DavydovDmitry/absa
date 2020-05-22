@@ -1,43 +1,26 @@
-"""Module for reviews representation
-
-Also function `get_reviews` create Review instances from xml.
-Assuming that xml have a structure...
-"""
-
 import xml
+from xml.etree import ElementTree
 import re
-from typing import List
+from typing import List, Dict
 import logging
-import pickle
 import sys
 
-from gensim.models import KeyedVectors
 from tqdm import tqdm
-from .sentence import Sentence
-from .target import Target
+
+from absa.review.raw.review import Review
+from absa.review.raw.sentence import Sentence
+from absa.review.target.target import Target
 from absa import PROGRESSBAR_COLUMNS_NUM
 
 
-class Review:
-    def __init__(self, sentences: List[Sentence]):
-        self.sentences = sentences
-
-    def __repr__(self):
-        nl = '\n'
-        return f'{f"{nl}".join(map(lambda x : str(x), self.sentences))}'
-
-    def display(self):
-        """Color print of review."""
-
-        for sentence in self.sentences:
-            sentence.display()
-            print(end=' ')
-
-    def get_normalized(self) -> 'Review':
-        return Review(sentences=[sentence.get_normalized() for sentence in self.sentences])
+def parse_xml(vocabulary: Dict, pathway: str) -> List[Review]:
+    tree = ElementTree.parse(pathway)
+    root = tree.getroot()
+    initial_reviews = get_reviews(root, vocabulary)
+    return [x.get_normalized() for x in initial_reviews]
 
 
-def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> List[Review]:
+def get_reviews(root: xml.etree.ElementTree.Element, vocabulary: Dict) -> List[Review]:
     def _tokenize(text: str) -> List[str]:
         """Get representation of sentence text"""
         tokens = []
@@ -49,7 +32,7 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
                     # check there's is no such word in vocabulary.
                     # words in vocabulary in format lemma_POS
                     # todo: word can be not in canonical form
-                    if not [k for k in word2vec.vocab.keys() if temp == k[:len(temp)]]:
+                    if not [k for k in vocabulary if temp == k[:len(temp)]]:
                         first_token, token = token.split('-', maxsplit=1)
                         tokens.append('-')
                         tokens.append(first_token)
@@ -93,17 +76,4 @@ def get_reviews(root: xml.etree.ElementTree.Element, word2vec: KeyedVectors) -> 
             reviews.append(Review(sentences))
             progress_bar.update(1)
     logging.info('Reviews parsing is complete.')
-    return reviews
-
-
-def dump_reviews(reviews: List[Review], file_pathway):
-    with open(file_pathway, 'wb') as f:
-        pickle.dump(reviews, f)
-    logging.info('Make a dump of reviews.')
-
-
-def load_reviews(file_pathway) -> List[Review]:
-    with open(file_pathway, 'rb') as f:
-        reviews = pickle.load(f)
-    logging.info('Upload reviews from dump.')
     return reviews

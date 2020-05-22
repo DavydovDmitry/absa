@@ -7,14 +7,13 @@ from dataclasses import dataclass
 
 import torch as th
 import numpy as np
-from gensim.models import KeyedVectors
 from frozendict import frozendict
 from sklearn.metrics import f1_score
 from tqdm import tqdm
 
 from absa import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed_sentence import ParsedSentence
-from absa.review.target import Target
+from absa.review.parsed.sentence import ParsedSentence
+from absa.review.target.target import Target
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
@@ -26,31 +25,21 @@ class AspectClassifier:
 
     Attributes
     ----------
-    word2vec : KeyedVectors
-        Vocabulary and embed_matrix are extracting from word2vec.
-        Otherwise you can pass vocabulary and emb_matrix.
     vocabulary : dict
         dictionary where key is wordlemma_POS value - index in embedding matrix
     emb_matrix : th.Tensor
         matrix of pretrained embeddings
     """
     def __init__(self,
-                 word2vec: KeyedVectors = ...,
-                 vocabulary: Dict[str, int] = ...,
-                 emb_matrix: th.Tensor = ...,
+                 vocabulary: Dict[str, int] = None,
+                 emb_matrix: th.Tensor = None,
                  aspect_labels=ASPECT_LABELS,
                  batch_size=100):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
         self.aspect_labels = Labels(labels=aspect_labels, none_value='NONE_VALUE')
 
-        # prepare vocabulary and embeddings
-        if isinstance(word2vec, KeyedVectors):
-            self.vocabulary = {w: i for i, w in enumerate(word2vec.index2word)}
-            emb_matrix = th.FloatTensor(word2vec.vectors)
-        else:
-            self.vocabulary = vocabulary
-
+        self.vocabulary = vocabulary
         while True:
             try:
                 self.model = NeuralNetwork(emb_matrix=emb_matrix,
@@ -199,7 +188,7 @@ class AspectClassifier:
                 sentence_len=[x.item() for x in batch.sentence_len.to('cpu')])
             for internal_index, targets in enumerate(pred_sentences_targets):
                 sentence_index = batch.sentence_index[internal_index]
-                sentence_nodes = sentences[sentence_index].get_sentence_order()
+                sentence_nodes = sentences[sentence_index].nodes_sentence_order()
 
                 explicit_targets = []
                 explicit_categories = set()

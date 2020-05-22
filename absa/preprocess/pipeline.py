@@ -1,22 +1,20 @@
 import os
-import xml.etree.ElementTree as ET
-import logging
-import sys
-import time
-import warnings
+from typing import Dict
 
-import stanfordnlp
-from gensim.models import KeyedVectors
-
-from absa import TEST_APPENDIX
-from absa import train_reviews_path, test_reviews_path, parsed_reviews_dump_path, checked_reviews_dump_path
-from absa.review import get_reviews, load_reviews, dump_reviews, reviews_dump_path
-from .spell_check import spell_check, load_checked_reviews, dump_checked_reviews
-from .dep_parse import parse_reviews, load_parsed_reviews, dump_parsed_reviews
+from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
+    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path
+from .parse_xml import parse_xml
+from .spell_check import spell_check
+from .dep_parse import dep_parse_reviews
+from ..utils.nlp import NLPPipeline
+from ..utils.dump import make_dump, load_dump
 
 
-def preprocess_pipeline(word2vec: KeyedVectors = ..., is_train=True):
-    """Pipeline for review's preprocessing
+def preprocess_pipeline(vocabulary: Dict = None,
+                        is_train: bool = True,
+                        skip_spell_check: bool = True,
+                        make_dumps: bool = True):
+    """Pipeline for review preprocess
 
     Pipeline:
     - reviews parsing - tokenize reviews and create it's representation
@@ -48,6 +46,7 @@ def preprocess_pipeline(word2vec: KeyedVectors = ..., is_train=True):
     Make dumps of results of every stage, to not run all stages further.
     """
 
+    # Set postfix for train/test data
     if is_train:
         appendix = ''
         reviews_path = train_reviews_path
@@ -56,45 +55,35 @@ def preprocess_pipeline(word2vec: KeyedVectors = ..., is_train=True):
         reviews_path = test_reviews_path
 
     # Parse reviews
-    if os.path.isfile(reviews_dump_path + appendix):
-        reviews = load_reviews(reviews_dump_path + appendix)
+    if os.path.isfile(raw_reviews_dump_path + appendix):
+        reviews = load_dump(pathway=raw_reviews_dump_path + appendix)
     else:
-        tree = ET.parse(reviews_path)
-        root = tree.getroot()
-        if not isinstance(word2vec, KeyedVectors):
+        if vocabulary is None:
             raise ValueError(
-                "There's no dump. Need to parse review. Therefore word2vec parameter is required."
+                "There's no dump. Need to parse review. Therefore vocabulary parameter is required."
             )
-        initial_reviews = get_reviews(root, word2vec)
-        reviews = [x.get_normalized() for x in initial_reviews]
-        dump_reviews(reviews, reviews_dump_path + appendix)
+        reviews = parse_xml(vocabulary=vocabulary, pathway=reviews_path)
+        if make_dumps:
+            make_dump(obj=reviews, pathway=raw_reviews_dump_path + appendix)
 
     # Spellcheck
-    if os.path.isfile(checked_reviews_dump_path + appendix):
-        reviews, spell_checked2init = load_checked_reviews(
-            file_pathway=checked_reviews_dump_path + appendix)
-    else:
-        reviews, spell_checked2init = spell_check(reviews)
-        dump_checked_reviews((reviews, spell_checked2init),
-                             file_pathway=checked_reviews_dump_path + appendix)
+    if not skip_spell_check:
+        if os.path.isfile(checked_reviews_dump_path + appendix):
+            reviews, spell_checked2init = load_dump(pathway=checked_reviews_dump_path +
+                                                    appendix)
+        else:
+            reviews, spell_checked2init = spell_check(reviews)
+            if make_dumps:
+                make_dump(obj=(reviews, spell_checked2init),
+                          pathway=checked_reviews_dump_path + appendix)
 
     # Dependency parsing
     if os.path.isfile(parsed_reviews_dump_path + appendix):
-        parsed_reviews = load_parsed_reviews(file_pathway=parsed_reviews_dump_path + appendix)
+        parsed_reviews = load_dump(pathway=parsed_reviews_dump_path + appendix)
     else:
-        logging.info('Prepare for dep parsing...')
-        sys.stdout = open(os.devnull, 'w')
-        while True:
-            try:
-                nlp = stanfordnlp.Pipeline(lang='ru', )
-            except RuntimeError:
-                time.sleep(5)
-            else:
-                break
-        warnings.filterwarnings("ignore", category=UserWarning)
-        sys.stdout = sys.__stdout__
-
-        parsed_reviews = parse_reviews(reviews, nlp)
-        dump_parsed_reviews(parsed_reviews, file_pathway=parsed_reviews_dump_path + appendix)
+        nlp = NLPPipeline.nlp
+        parsed_reviews = dep_parse_reviews(reviews, nlp)
+        if make_dumps:
+            make_dump(obj=parsed_reviews, pathway=parsed_reviews_dump_path + appendix)
 
     return parsed_reviews

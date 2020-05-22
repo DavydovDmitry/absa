@@ -1,7 +1,6 @@
 from typing import List
 import re
 import logging
-import pickle
 import sys
 
 import networkx as nx
@@ -9,14 +8,15 @@ import stanfordnlp
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.review import Review, Target
-from absa.review.parsed_sentence import ParsedSentence
+from absa.review.raw.review import Review
+from absa.review.target.target import Target
+from absa.review.parsed.sentence import ParsedSentence
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def parse_reviews(reviews: List[Review],
-                  nlp: stanfordnlp.Pipeline) -> List[List[ParsedSentence]]:
+def dep_parse_reviews(reviews: List[Review],
+                      nlp: stanfordnlp.Pipeline) -> List[List[ParsedSentence]]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -64,9 +64,9 @@ def parse_reviews(reviews: List[Review],
                     sentence_text = sentence.get_text()
                     docs = nlp(sentence_text).sentences
                     start = 0
-                    token_index = -1
+                    token_index = 0
                     for doc in docs:
-                        total_token_index = token_index + 1
+                        total_token_index = token_index
                         for token in doc.tokens:
                             token_index = total_token_index + int(token.index)
                             word = token.words[0]
@@ -87,10 +87,11 @@ def parse_reviews(reviews: List[Review],
                             id2dep[token_index] = word.dependency_relation
 
                         for token in doc.tokens:
-                            token_index = total_token_index + int(token.index)
                             word = token.words[0]
-                            if (token_index in graph) and (word.governor in graph):
-                                graph.add_edge(token_index, word.governor)
+                            token_index = total_token_index + int(token.index)
+                            governor = total_token_index + word.governor
+                            if (token_index in graph) and (governor in graph):
+                                graph.add_edge(token_index, governor)
 
                         if sentence.targets:
                             for target in sentence.targets:
@@ -112,22 +113,9 @@ def parse_reviews(reviews: List[Review],
                                    id2word=id2word,
                                    id2lemma=id2lemma,
                                    id2dep=id2dep,
-                                   id2prev_id=id2prev_id,
+                                   id2init_id=id2prev_id,
                                    targets=targets))
             parsed_reviews.append(parsed_sentences)
             progress_bar.update(1)
     logging.info('Dependency parsing is complete.')
-    return parsed_reviews
-
-
-def dump_parsed_reviews(parsed_reviews: List[List[ParsedSentence]], file_pathway: str):
-    with open(file_pathway, 'wb') as f:
-        pickle.dump(parsed_reviews, f)
-    logging.info('Make a dump of dependency trees.')
-
-
-def load_parsed_reviews(file_pathway: str) -> List[List[ParsedSentence]]:
-    with open(file_pathway, 'rb') as f:
-        parsed_reviews = pickle.load(f)
-    logging.info('Upload dependency trees from dump.')
     return parsed_reviews

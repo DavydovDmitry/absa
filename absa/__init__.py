@@ -1,4 +1,5 @@
-"""Specify constants and pathways here"""
+"""Specify constants, pathways, dumps"""
+
 import os
 
 # ------------------------------- Constants -----------------------------------
@@ -6,8 +7,8 @@ SCORE_DECIMAL_LEN = 5
 PROGRESSBAR_COLUMNS_NUM = 100
 
 # ------------------------------- Embeddings ----------------------------------
-UNKNOWN_WORD = '<unk>'  # index of that word will be using if word not found in vocabulary
-PAD_WORD = '<pad>'  # index of that word will be using to pad sentence to length to maximal length in batch
+UNKNOWN_WORD = '<unk>'  # index of word that not found in vocabulary
+PAD_WORD = '<pad>'  # index of that word will be using to pad sentence to maximal length in batch
 
 # ------------------------------- Pathways ------------------------------------
 module_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,10 +29,13 @@ log_path = os.path.join(module_path, 'logs')
 # --------------------------------- Dumps -------------------------------------
 dumps_path = os.path.join(module_path, 'dumps')
 
+vocabulary_dump = os.path.join(dumps_path, 'vocabulary')
+embed_matrix_path = os.path.join(dumps_path, 'embed_matrix')
+
 # Processed data
+raw_reviews_dump_path = os.path.join(dumps_path, 'reviews')
 checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')
 parsed_reviews_dump_path = os.path.join(dumps_path, 'dep_parsed_sentence')
-labeled_reviews_dump_path = os.path.join(dumps_path, 'labeled_reviews')
 
 # classifiers
 sentence_aspect_classifier_dump_path = os.path.join(dumps_path,

@@ -2,19 +2,28 @@ from typing import List
 
 from termcolor import colored
 
-from .target import Target
+from ..target.target import Target
+from ..target.mixin import TargetMixin
 
 
-class Sentence:
-    def __init__(self, text: List[str], targets: List[Target]):
+class Sentence(TargetMixin):
+    def __init__(self, text: List[str], targets: List[Target] = None):
+        if targets is None:
+            targets = []
+        super().__init__(targets=targets)
+
         self.text = text
-        self.targets = targets
 
     def __repr__(self):
         return f'Text: {self.text}\n' + \
                f'Targets: {"; ".join(map(lambda x: str(x), self.targets))}'
 
-    def get_text(self):
+    def __eq__(self, other: 'Sentence'):
+        if not isinstance(other, Sentence):
+            return False
+        return (self.text == other.text) & (self.targets == other.targets)
+
+    def get_text(self) -> str:
         return ''.join(self.text)
 
     def get_normalized(self) -> 'Sentence':
@@ -25,7 +34,7 @@ class Sentence:
             tokens[-1] = tokens[-1][:-1]
         return Sentence(text=tokens, targets=self.targets)
 
-    def display(self):
+    def display(self) -> None:
         """Print sentence with according colors."""
         def get_color(polarity: str):
             if polarity == 'positive':
