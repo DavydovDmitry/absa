@@ -65,7 +65,6 @@ in `absa/__init__.py <https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/_
 ------
 Essential stages
 ------
-
 ::
 
 
@@ -75,17 +74,17 @@ Essential stages
     |             V                                                            |
     |       Upload reviews                                                     |
     |             |                                                            |
-    |             |     List[Reviews]                                          |
+    |             |     List[Review]                                           |
     |             V                                                            |
     |         Spell check                                                      |
     |             |                                                            |
-    |             |     List[Reviews]                                          |
+    |             |     List[Review]                                           |
     |             V                                                            |
     |      Dependency parsing                                                  |
     |             |                                                            |
     +--------------------------------------------------------------------------+
                   |
-                  V
+                  V    List[ParsedReview]
                   |
     +-------------------------------------- ABSA pipeline ---------------------+
     |             |                                                            |
@@ -93,16 +92,15 @@ Essential stages
     |             V                                                            |
     | Sentence Level Aspect Classification                                     |
     |             |                                                            |
-    |             |     List[ParsedSentence]                                   |
+    |             |     List[ParsedReview]                                     |
     |             V                                                            |
-    | Target Level Aspect Classification                                       |
+    |  Target Level Aspect Classification                                      |
     |             |                                                            |
     +--------------------------------------------------------------------------+
-    |             |     List[ParsedSentence]                                   |
+    |             |     List[ParsedReview]                                     |
     |             V                                                            |
-    |      Polarity Classification                                             |
-    |             |                                                            |
+    |   Polarity Classification                                                |
     |             |                                                            |
     +--------------------------------------------------------------------------+
                   |
-                  V
+                  V     List[ParsedReview]
