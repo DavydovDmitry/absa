@@ -54,7 +54,7 @@ class AspectClassifier:
         criterion = th.nn.BCEWithLogitsLoss()
         self.loss_func = lambda y_pred, y: criterion(y_pred, y)
 
-        if threshold:
+        if threshold is not None:
             self.threshold = threshold
         else:
             self.threshold = np.random.random(len(self.aspect_labels)) - 1.0

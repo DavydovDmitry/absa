@@ -6,12 +6,14 @@ import dgl
 import networkx as nx
 
 from absa import UNKNOWN_WORD, PAD_WORD
+from absa.review.parsed.review import ParsedReview
 from absa.review.parsed.sentence import ParsedSentence
 
 Batch = namedtuple(
     'Batch',
     [
         # Indexes to set classification results to sentence
+        'text_index',
         'sentence_index',
         'target_index',
         # GPU part. This fields will be passed to GPU.
@@ -38,7 +40,7 @@ class DataLoader:
     """
     def __init__(self,
                  vocabulary: Dict[str, int],
-                 sentences: List[ParsedSentence],
+                 texts: List[ParsedReview],
                  batch_size: int,
                  device: th.device,
                  unknown_word=UNKNOWN_WORD,
@@ -49,20 +51,32 @@ class DataLoader:
         self.unknown_word = unknown_word
         self.pad_word = pad_word
 
-        data = self.process(sentences)
+        data = self.process(texts)
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def process(self, sentences: List[ParsedSentence]) -> List[Batch]:
-        """Process all sentences"""
+    def process(self, texts: List[ParsedReview]) -> List[Batch]:
+        """Process all texts
+
+        Parameters
+        ----------
+        todo:
+
+        Return
+        ------
+        """
         processed = []
-        for sentence_index, sentence in enumerate(sentences):
-            if sentence.graph.nodes and sentence.targets:
-                processed.extend(
-                    self.process_sentence(sentence=sentence, sentence_index=sentence_index))
+        for text_index, text in enumerate(texts):
+            for sentence_index, sentence in enumerate(text):
+                if sentence.graph.nodes and sentence.targets:
+                    processed.extend(
+                        self.process_sentence(sentence=sentence,
+                                              text_index=text_index,
+                                              sentence_index=sentence_index))
         return processed
 
-    def process_sentence(self, sentence: ParsedSentence, sentence_index: int) -> List[Batch]:
+    def process_sentence(self, sentence: ParsedSentence, text_index: int,
+                         sentence_index: int) -> List[Batch]:
         """Process one sentence
 
         Returns
@@ -84,9 +98,6 @@ class DataLoader:
 
         graph = dgl.DGLGraph()
         graph.from_networkx(sentence.graph)
-        # todo:
-        if [x for x in nx.simple_cycles(sentence.graph)]:
-            raise ValueError('CYCLE!!!')
 
         for target_index, target in enumerate(sentence.targets):
             if not target.nodes:
@@ -99,7 +110,8 @@ class DataLoader:
             polarity = target.polarity.value
 
             processed.append(
-                Batch(sentence_index=sentence_index,
+                Batch(text_index=text_index,
+                      sentence_index=sentence_index,
                       target_index=target_index,
                       sentence_len=sentence_len,
                       embed_ids=embed_ids,
@@ -134,7 +146,6 @@ class DataLoader:
         max_len = max([x.sentence_len for x in batch])
         batch = sort_by_sentence_len(batch=batch)
 
-        sentence_index = th.LongTensor([x.sentence_index for x in batch])
         target_index = th.LongTensor([x.target_index for x in batch])
         sentence_lens = th.LongTensor([x.sentence_len for x in batch])
         polarity = th.LongTensor([x.polarity for x in batch])
@@ -143,7 +154,8 @@ class DataLoader:
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
-        return Batch(sentence_index=sentence_index,
+        return Batch(text_index=th.LongTensor([x.text_index for x in batch]),
+                     sentence_index=th.LongTensor([x.sentence_index for x in batch]),
                      target_index=target_index,
                      sentence_len=sentence_lens.to(self.device),
                      embed_ids=embed_ids.to(self.device),

@@ -21,7 +21,6 @@ from absa.classification.sentence.aspect.classifier import AspectClassifier as S
 from absa.classification.opinion.aspect.classifier import AspectClassifier as TargetAspectClassifier
 from absa.classification.opinion.polarity.classifier import PolarityClassifier
 from absa.review.parsed.review import ParsedReview
-from absa.review.parsed.sentence import ParsedSentence
 
 SEED = 42
 
@@ -50,14 +49,16 @@ def configure_logging():
 
 def sentence_aspect_classification(train_reviews: List[ParsedReview],
                                    test_reviews: List[ParsedReview]) -> List[ParsedReview]:
-    # classifier = SentenceAspectClassifier.load_model()
-    classifier = SentenceAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+    if True:
+        classifier = SentenceAspectClassifier.load_model()
+    else:
+        classifier = SentenceAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+        classifier.fit(train_texts=train_reviews)
 
     test_reviews_pred = copy.deepcopy(test_reviews)
     for review in test_reviews_pred:
         review.reset_targets()
 
-    classifier.fit(train_texts=train_reviews)
     test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
         f'Score: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
@@ -67,9 +68,11 @@ def sentence_aspect_classification(train_reviews: List[ParsedReview],
 def target_aspect_classification(train_reviews: List[ParsedReview],
                                  test_reviews: List[ParsedReview],
                                  test_reviews_pred: List[ParsedReview]) -> List[ParsedReview]:
-    # classifier = TargetAspectClassifier.load_model()
-    classifier = TargetAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-    classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
+    if True:
+        classifier = TargetAspectClassifier.load_model()
+    else:
+        classifier = TargetAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+        classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
 
     test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
@@ -77,22 +80,23 @@ def target_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def target_polarity_classification(
-        train_sentences: List[ParsedSentence],
-        test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
-    # classifier = PolarityClassifier.load_model()
-    classifier = PolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+def target_polarity_classification(train_reviews: List[ParsedReview],
+                                   test_reviews: List[ParsedReview]) -> List[ParsedReview]:
+    if True:
+        classifier = PolarityClassifier.load_model()
+    else:
+        classifier = PolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+        classifier.fit(train_texts=train_reviews, val_texts=test_reviews, num_epoch=20)
 
-    test_sentences_pred = copy.deepcopy(test_sentences)
-    for sentence in test_sentences_pred:
-        sentence.reset_targets_polarities()
+    test_reviews_pred = copy.deepcopy(test_reviews)
+    for review in test_reviews_pred:
+        for sentence in review.sentences:
+            sentence.reset_targets_polarities()
 
-    test_sentences_pred = classifier.predict(test_sentences_pred)
+    test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
-        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
-    )
-    return test_sentences_pred
+        f'Score: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
+    return test_reviews_pred
 
 
 if __name__ == "__main__":
@@ -115,4 +119,4 @@ if __name__ == "__main__":
     target_aspect_classification(train_reviews=train_reviews,
                                  test_reviews=test_reviews,
                                  test_reviews_pred=test_reviews_pred)
-    # target_polarity_classification(train_sentences=train_reviews, test_sentences=test_reviews)
+    target_polarity_classification(train_reviews=train_reviews, test_reviews=test_reviews)
