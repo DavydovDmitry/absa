@@ -1,7 +1,4 @@
-"""Module for reviews representation
-
-Also function `get_reviews` create Review instances from xml.
-Assuming that xml have a structure...
+"""Module for raw reviews representation
 """
 
 from typing import List

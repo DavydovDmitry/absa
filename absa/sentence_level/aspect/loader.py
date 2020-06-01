@@ -5,11 +5,13 @@ import torch as th
 
 from absa import UNKNOWN_WORD, PAD_WORD
 from absa.review.parsed.sentence import ParsedSentence
+from absa.review.parsed.review import ParsedReview
 from absa.labels.labels import Labels
 
 Batch = namedtuple(
     'Batch',
     [
+        'text_index',
         'sentence_index',
         # GPU part. This fields will be passed to GPU.
         'sentence_len',
@@ -33,7 +35,7 @@ class DataLoader:
     """
     def __init__(self,
                  vocabulary: Dict[str, int],
-                 sentences: List[ParsedSentence],
+                 texts: List[ParsedReview],
                  batch_size: int,
                  device: th.device,
                  aspect_labels: Labels,
@@ -46,20 +48,35 @@ class DataLoader:
         self.pad_word = pad_word
         self.aspect_labels = aspect_labels
 
-        data = self.process(sentences)
+        data = self.process(texts)
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def process(self, sentences: List[ParsedSentence]) -> List[Batch]:
-        """Process all sentences"""
+    def process(self, texts: List[ParsedReview]) -> List[Batch]:
+        """Process all texts
+
+        Parameters
+        ----------
+        texts : List[ParsedReview]
+            texts corpus
+
+        Return
+        ------
+        processed : List[Batch]
+            batch elements
+        """
         processed = []
-        for sentence_index, sentence in enumerate(sentences):
-            if len(sentence):
-                processed.append(
-                    self.process_sentence(sentence=sentence, sentence_index=sentence_index))
+        for text_index, text in enumerate(texts):
+            for sentence_index, sentence in enumerate(text):
+                if len(sentence):
+                    processed.append(
+                        self.process_sentence(sentence=sentence,
+                                              text_index=text_index,
+                                              sentence_index=sentence_index))
         return processed
 
-    def process_sentence(self, sentence: ParsedSentence, sentence_index: int) -> Batch:
+    def process_sentence(self, sentence: ParsedSentence, text_index: int,
+                         sentence_index: int) -> Batch:
         """Process one sentence
         """
 
@@ -78,6 +95,7 @@ class DataLoader:
             labels[self.aspect_labels.get_index(target.category)] = 1.0
 
         return Batch(
+            text_index=text_index,
             sentence_index=sentence_index,
             sentence_len=sentence_len,
             embed_ids=embed_ids,
@@ -118,6 +136,7 @@ class DataLoader:
 
         labels = th.stack([item.labels for item in batch])
         return Batch(
+            text_index=th.LongTensor([x.text_index for x in batch]),
             sentence_index=th.LongTensor([x.sentence_index for x in batch]),
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),

@@ -11,12 +11,12 @@ from absa import PROGRESSBAR_COLUMNS_NUM
 from absa.review.raw.review import Review
 from absa.review.target.target import Target
 from absa.review.parsed.sentence import ParsedSentence
+from absa.review.parsed.review import ParsedReview
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def dep_parse_reviews(reviews: List[Review],
-                      nlp: stanfordnlp.Pipeline) -> List[List[ParsedSentence]]:
+def dep_parse_reviews(reviews: List[Review], nlp: stanfordnlp.Pipeline) -> List[ParsedReview]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -37,11 +37,14 @@ def dep_parse_reviews(reviews: List[Review],
     Parameters
     ----------
     reviews: list[Review]
+        list of raw reviews
     nlp: stanfordnlp.Pipeline
+        pipeline for text processing
 
     Returns
     ----------
-    List of list parsed sentences
+    parsed_reviews : List[ParsedReview]
+        List of parsed reviews
     """
 
     logging.info('Start dependency parsing...')
@@ -86,6 +89,7 @@ def dep_parse_reviews(reviews: List[Review],
                             id2lemma[token_index] = word.lemma + '_' + word.upos
                             id2dep[token_index] = word.dependency_relation
 
+                        # Create dependency graph from id2lemma nodes
                         for token in doc.tokens:
                             word = token.words[0]
                             token_index = total_token_index + int(token.index)
@@ -93,6 +97,7 @@ def dep_parse_reviews(reviews: List[Review],
                             if (token_index in graph) and (governor in graph):
                                 graph.add_edge(token_index, governor)
 
+                        # Create targets with nodes from id2lemma nodes
                         if sentence.targets:
                             for target in sentence.targets:
                                 parsed_target_nodes = []
@@ -115,7 +120,7 @@ def dep_parse_reviews(reviews: List[Review],
                                    id2dep=id2dep,
                                    id2init_id=id2prev_id,
                                    targets=targets))
-            parsed_reviews.append(parsed_sentences)
+            parsed_reviews.append(ParsedReview(sentences=parsed_sentences))
             progress_bar.update(1)
     logging.info('Dependency parsing is complete.')
     return parsed_reviews
