@@ -8,11 +8,11 @@ import copy
 from absa import TEST_APPENDIX, log_path
 from absa import parsed_reviews_dump_path
 from absa.utils.embedding import Embeddings
-from absa.utils.dump import make_dump, load_dump
+from absa.utils.dump import load_dump
 from absa.preprocess.pipeline import preprocess_pipeline
-from absa.sentence_level.aspect.classifier import AspectClassifier as SentenceAspectClassifier
-from absa.target_level.aspect.classifier import AspectClassifier as TargetAspectClassifier
-from absa.target_level.polarity.classifier import PolarityClassifier
+from absa.classification.sentence import AspectClassifier as SentenceAspectClassifier
+from absa.classification.opinion import AspectClassifier as TargetAspectClassifier
+from absa.classification.opinion.polarity.classifier import PolarityClassifier
 from absa.review.parsed.sentence import ParsedSentence
 
 SEED = 42

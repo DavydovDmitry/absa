@@ -5,7 +5,6 @@ To run full pipeline execute run_pipeline.py
 
 import logging
 from typing import List
-from functools import reduce
 import datetime
 import os
 import copy
@@ -18,9 +17,9 @@ from absa import parsed_reviews_dump_path
 from absa.utils.embedding import Embeddings
 from absa.utils.dump import load_dump
 from absa.preprocess.pipeline import preprocess_pipeline
-from absa.sentence_level.aspect.classifier import AspectClassifier as SentenceAspectClassifier
-from absa.target_level.aspect.classifier import AspectClassifier as TargetAspectClassifier
-from absa.target_level.polarity.classifier import PolarityClassifier
+from absa.classification.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
+from absa.classification.opinion.aspect.classifier import AspectClassifier as TargetAspectClassifier
+from absa.classification.opinion.polarity.classifier import PolarityClassifier
 from absa.review.parsed.review import ParsedReview
 from absa.review.parsed.sentence import ParsedSentence
 
@@ -65,18 +64,17 @@ def sentence_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def target_aspect_classification(
-        train_sentences: List[ParsedSentence], test_sentences: List[ParsedSentence],
-        pred_test_sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+def target_aspect_classification(train_reviews: List[ParsedReview],
+                                 test_reviews: List[ParsedReview],
+                                 test_reviews_pred: List[ParsedReview]) -> List[ParsedReview]:
     # classifier = TargetAspectClassifier.load_model()
     classifier = TargetAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-    classifier.fit(train_sentences=train_sentences, val_sentences=test_sentences)
+    classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
 
-    test_sentences_pred = classifier.predict(pred_test_sentences)
+    test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
-        f'Score: {classifier.score(sentences=test_sentences, sentences_pred=test_sentences_pred)}'
-    )
-    return test_sentences_pred
+        f'Score: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
+    return test_reviews_pred
 
 
 def target_polarity_classification(
@@ -114,7 +112,7 @@ if __name__ == "__main__":
 
     test_reviews_pred = sentence_aspect_classification(train_reviews=train_reviews,
                                                        test_reviews=test_reviews)
-    target_aspect_classification(train_sentences=train_reviews,
-                                 test_sentences=test_reviews,
-                                 pred_test_sentences=test_reviews_pred)
-    target_polarity_classification(train_sentences=train_reviews, test_sentences=test_reviews)
+    target_aspect_classification(train_reviews=train_reviews,
+                                 test_reviews=test_reviews,
+                                 test_reviews_pred=test_reviews_pred)
+    # target_polarity_classification(train_sentences=train_reviews, test_sentences=test_reviews)
