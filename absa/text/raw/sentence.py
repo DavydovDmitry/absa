@@ -2,26 +2,26 @@ from typing import List
 
 from termcolor import colored
 
-from ..target.target import Target
-from ..target.mixin import TargetMixin
+from ..opinion.opinion import Opinion
+from ..opinion.mixin import OpinionMixin
 
 
-class Sentence(TargetMixin):
-    def __init__(self, text: List[str], targets: List[Target] = None):
-        if targets is None:
-            targets = []
-        super().__init__(targets=targets)
+class Sentence(OpinionMixin):
+    def __init__(self, text: List[str], opinions: List[Opinion] = None):
+        if opinions is None:
+            opinions = []
+        super().__init__(opinions=opinions)
 
         self.text = text
 
     def __repr__(self):
         return f'Text: {self.text}\n' + \
-               f'Targets: {"; ".join(map(lambda x: str(x), self.targets))}'
+               f'Opinions: {"; ".join(map(lambda x: str(x), self.opinions))}'
 
     def __eq__(self, other: 'Sentence'):
         if not isinstance(other, Sentence):
             return False
-        return (self.text == other.text) & (self.targets == other.targets)
+        return (self.text == other.text) & (self.opinions == other.opinions)
 
     def get_text(self) -> str:
         return ''.join(self.text)
@@ -32,7 +32,7 @@ class Sentence(TargetMixin):
             for token in self.text:
                 tokens.append(token.strip() + ' ')
             tokens[-1] = tokens[-1][:-1]
-        return Sentence(text=tokens, targets=self.targets)
+        return Sentence(text=tokens, opinions=self.opinions)
 
     def display(self) -> None:
         """Print sentence with according colors."""
@@ -45,12 +45,12 @@ class Sentence(TargetMixin):
                 return 'yellow'
 
         on_color = None
-        if self.targets:
-            if not self.targets[0].nodes:
-                on_color = 'on_' + get_color(self.targets[0].polarity.name)
+        if self.opinions:
+            if not self.opinions[0].nodes:
+                on_color = 'on_' + get_color(self.opinions[0].polarity.name)
 
         for token_index, token in enumerate(self.text):
-            for target in self.targets:
+            for target in self.opinions:
                 if token_index in target.nodes:
                     print(colored(text=token,
                                   color=get_color(target.polarity.name),

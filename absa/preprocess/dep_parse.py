@@ -8,15 +8,15 @@ import stanfordnlp
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.raw.review import Review
-from absa.review.target.target import Target
-from absa.review.parsed.sentence import ParsedSentence
+from absa.text.raw.review import Review
+from absa.text.opinion.opinion import Opinion
+from absa.text.parsed.sentence import ParsedSentence
+from absa.text.parsed.review import ParsedReview
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def dep_parse_reviews(reviews: List[Review],
-                      nlp: stanfordnlp.Pipeline) -> List[List[ParsedSentence]]:
+def dep_parse_reviews(reviews: List[Review], nlp: stanfordnlp.Pipeline) -> List[ParsedReview]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -37,11 +37,14 @@ def dep_parse_reviews(reviews: List[Review],
     Parameters
     ----------
     reviews: list[Review]
+        list of raw reviews
     nlp: stanfordnlp.Pipeline
+        pipeline for text processing
 
     Returns
     ----------
-    List of list parsed sentences
+    parsed_reviews : List[ParsedReview]
+        List of parsed reviews
     """
 
     logging.info('Start dependency parsing...')
@@ -86,6 +89,7 @@ def dep_parse_reviews(reviews: List[Review],
                             id2lemma[token_index] = word.lemma + '_' + word.upos
                             id2dep[token_index] = word.dependency_relation
 
+                        # Create dependency graph from id2lemma nodes
                         for token in doc.tokens:
                             word = token.words[0]
                             token_index = total_token_index + int(token.index)
@@ -93,8 +97,9 @@ def dep_parse_reviews(reviews: List[Review],
                             if (token_index in graph) and (governor in graph):
                                 graph.add_edge(token_index, governor)
 
-                        if sentence.targets:
-                            for target in sentence.targets:
+                        # Create targets with nodes from id2lemma nodes
+                        if sentence.opinions:
+                            for target in sentence.opinions:
                                 parsed_target_nodes = []
                                 if target.nodes:
                                     for target_node in target.nodes:
@@ -104,9 +109,9 @@ def dep_parse_reviews(reviews: List[Review],
                                             if id2prev_id[node_id] == target_node:
                                                 parsed_target_nodes.append(node_id)
                                 targets.append(
-                                    Target(nodes=parsed_target_nodes,
-                                           category=target.category,
-                                           polarity=target.polarity))
+                                    Opinion(nodes=parsed_target_nodes,
+                                            category=target.category,
+                                            polarity=target.polarity))
 
                 parsed_sentences.append(
                     ParsedSentence(graph=graph,
@@ -114,8 +119,8 @@ def dep_parse_reviews(reviews: List[Review],
                                    id2lemma=id2lemma,
                                    id2dep=id2dep,
                                    id2init_id=id2prev_id,
-                                   targets=targets))
-            parsed_reviews.append(parsed_sentences)
+                                   opinions=targets))
+            parsed_reviews.append(ParsedReview(sentences=parsed_sentences))
             progress_bar.update(1)
     logging.info('Dependency parsing is complete.')
     return parsed_reviews

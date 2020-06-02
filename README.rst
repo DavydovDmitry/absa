@@ -94,7 +94,7 @@ Essential stages
     |             |                                                            |
     |             |     List[ParsedReview]                                     |
     |             V                                                            |
-    |  Target Level Aspect Classification                                      |
+    | Opinion Level Aspect Classification                                      |
     |             |                                                            |
     +--------------------------------------------------------------------------+
     |             |     List[ParsedReview]                                     |

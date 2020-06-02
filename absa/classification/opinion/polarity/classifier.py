@@ -11,9 +11,10 @@ from sklearn import metrics
 from frozendict import frozendict
 from tqdm import tqdm
 
-from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed.sentence import ParsedSentence
-from absa.review.target.target import Polarity
+from absa import SCORE_DECIMAL_LEN, opinion_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
+from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.sentence import ParsedSentence
+from absa.text.opinion.opinion import Polarity
 from .loader import DataLoader, Batch
 from .nn.nn import NeurelNetwork
 
@@ -52,7 +53,7 @@ class PolarityClassifier:
         """Make a forward step and return metrics"""
         logits = self.model(embed_ids=batch.embed_ids,
                             graph=batch.graph,
-                            target_mask=batch.target_mask,
+                            term_mask=batch.term_mask,
                             sentence_len=batch.sentence_len)
         loss = F.cross_entropy(logits, batch.polarity, reduction='mean')
         corrects = (th.max(logits, 1)[1].view(
@@ -61,8 +62,8 @@ class PolarityClassifier:
         return logits, loss, acc
 
     def fit(self,
-            train_sentences: List[ParsedSentence],
-            val_sentences=None,
+            train_texts: List[ParsedReview],
+            val_texts=None,
             optimizer_class=th.optim.Adamax,
             optimizer_params=frozendict({
                 'lr': 0.01,
@@ -75,14 +76,14 @@ class PolarityClassifier:
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, **optimizer_params)
 
-        train_batches = DataLoader(sentences=train_sentences,
+        train_batches = DataLoader(texts=train_texts,
                                    batch_size=self.batch_size,
                                    vocabulary=self.vocabulary,
                                    device=self.device)
         train_acc_history, train_loss_history = [], []
 
-        if val_sentences:
-            val_batches = DataLoader(sentences=val_sentences,
+        if val_texts:
+            val_batches = DataLoader(texts=val_texts,
                                      batch_size=self.batch_size,
                                      vocabulary=self.vocabulary,
                                      device=self.device)
@@ -104,7 +105,7 @@ class PolarityClassifier:
                 train_acc += acc
 
             # Validation
-            if val_sentences:
+            if val_texts:
                 val_len = len(val_batches)
                 self.model.eval()
                 predictions, labels = [], []
@@ -138,7 +139,7 @@ class PolarityClassifier:
             train_acc_history.append(train_acc)
             train_loss_history.append(train_loss)
 
-        if verbose and (val_sentences is not None):
+        if verbose and (val_texts is not None):
             for epoch in range(num_epoch):
                 epoch_step()
         else:
@@ -150,16 +151,16 @@ class PolarityClassifier:
 
         if save_state:
             self.save_model()
-        if val_sentences:
+        if val_texts:
             return train_acc_history, val_acc_history
         return train_acc_history
 
-    def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+    def predict(self, texts: List[ParsedReview]) -> List[ParsedReview]:
         """Modify passed sentences. Define every target polarity.
 
         Parameters
         ----------
-        sentences : List[ParsedSentence]
+        texts : List[ParsedReview]
             Sentences with extracted targets.
 
         Return
@@ -168,34 +169,36 @@ class PolarityClassifier:
             Sentences with defined polarity of every target.
         """
         self.model.eval()
-        sentences = copy.deepcopy(sentences)
-        batches = DataLoader(sentences=sentences,
+        texts = copy.deepcopy(texts)
+        batches = DataLoader(texts=texts,
                              batch_size=self.batch_size,
                              vocabulary=self.vocabulary,
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids,
                                 graph=batch.graph,
-                                target_mask=batch.target_mask,
+                                term_mask=batch.term_mask,
                                 sentence_len=batch.sentence_len)
             pred_labels = np.argmax(logits.data.numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):
+                text_index = batch.text_index[item_index]
                 sentence_index = batch.sentence_index[item_index]
-                target_index = batch.target_index[item_index]
-                sentences[sentence_index].targets[target_index].set_polarity(item)
-        return sentences
+                opinion_index = batch.opinion_index[item_index]
+                texts[text_index].sentences[sentence_index].opinions[
+                    opinion_index].set_polarity(item)
+        return texts
 
     def save_model(self):
         """Save model state."""
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
-        }, target_polarity_classifier_dump_path)
+        }, opinion_polarity_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'PolarityClassifier':
         """Load pretrained model."""
-        checkpoint = th.load(target_polarity_classifier_dump_path)
+        checkpoint = th.load(opinion_polarity_classifier_dump_path)
         model = checkpoint['model']
         classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],
                                         emb_matrix=model['nn.embed.weight'])
@@ -203,7 +206,7 @@ class PolarityClassifier:
         return classifier
 
     @staticmethod
-    def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]) -> float:
+    def score(texts: List[ParsedReview], texts_pred: List[ParsedReview]) -> float:
         """Accuracy of predictions
 
         Returns
@@ -214,30 +217,30 @@ class PolarityClassifier:
         correct_predictions = 0
         total_predictions = 0
 
-        for s_index, (s, s_pred) in enumerate(zip(sentences, sentences_pred)):
-            if (len(s.targets) != len(s_pred.targets)) or \
-               (len(set(hash(t) for t in s.targets) &
-                    set(hash(t) for t in s_pred.targets)) != len(s.targets)):
-                print(len(set(s.targets).intersection(set(s_pred.targets))))
+        for t_index, (t, t_pred) in enumerate(zip(texts, texts_pred)):
+            for s_index, (s, s_pred) in enumerate(zip(t, t_pred)):
+                if (len(s.opinions) != len(s_pred.opinions)) or \
+                   (len(set(hash(t) for t in s.opinions) &
+                        set(hash(t) for t in s_pred.opinions)) != len(s.opinions)):
+                    logging.error(len(set(s.opinions).intersection(set(s_pred.opinions))))
+                    logging.error('-' * 50 + ' Original  targets ' + '-' * 50)
+                    for l_target in s.opinions:
+                        logging.error(l_target)
+                    logging.error('-' * 50 + ' Predicted targets ' + '-' * 50)
+                    for l_target_pred in s_pred.opinions:
+                        logging.error(l_target_pred)
+                    raise ValueError(f'Targets mismatch in {t_index} text {s_index} sentence.')
 
-                logging.error('-' * 50 + ' Original  targets ' + '-' * 50)
-                for l_target in s.targets:
-                    logging.error(l_target)
-                logging.error('-' * 50 + ' Predicted targets ' + '-' * 50)
-                for l_target_pred in s_pred.targets:
-                    logging.error(l_target_pred)
-                raise ValueError(f'Targets mismatch in {s_index} sentence.')
-
-            for target in s.targets:
-                for target_pred in s_pred.targets:
-                    if (target.nodes == target_pred.nodes) and (target.category
-                                                                == target_pred.category):
-                        if target.polarity == target_pred.polarity:
-                            correct_predictions += 1
-                        total_predictions += 1
-                        break
-                else:
-                    raise ValueError
+                for target in s.opinions:
+                    for target_pred in s_pred.opinions:
+                        if (target.nodes == target_pred.nodes) and (target.category
+                                                                    == target_pred.category):
+                            if target.polarity == target_pred.polarity:
+                                correct_predictions += 1
+                            total_predictions += 1
+                            break
+                    else:
+                        raise ValueError
 
         accuracy = correct_predictions / total_predictions
         return accuracy

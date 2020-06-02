@@ -7,9 +7,9 @@ import sys
 
 from tqdm import tqdm
 
-from absa.review.raw.review import Review
-from absa.review.raw.sentence import Sentence
-from absa.review.target.target import Target
+from absa.text.raw.review import Review
+from absa.text.raw.sentence import Sentence
+from absa.text.opinion.opinion import Opinion
 from absa import PROGRESSBAR_COLUMNS_NUM
 
 
@@ -70,9 +70,9 @@ def get_reviews(root: xml.etree.ElementTree.Element, vocabulary: Dict) -> List[R
                                 start += len(token)
 
                         targets.append(
-                            Target(nodes=nodes, category=category, polarity=polarity))
+                            Opinion(nodes=nodes, category=category, polarity=polarity))
 
-                sentences.append(Sentence(text=text_tokens, targets=targets))
+                sentences.append(Sentence(text=text_tokens, opinions=targets))
             reviews.append(Review(sentences))
             progress_bar.update(1)
     logging.info('Reviews parsing is complete.')

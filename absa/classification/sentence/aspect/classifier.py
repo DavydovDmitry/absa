@@ -1,7 +1,6 @@
 from typing import List, Dict, Union, Tuple
 import copy
 import sys
-from dataclasses import dataclass
 
 import torch as th
 import numpy as np
@@ -10,16 +9,17 @@ from scipy.optimize import minimize as minimize
 from tqdm import tqdm
 
 from absa import sentence_aspect_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed.sentence import ParsedSentence
-from absa.review.target.target import Target
-from .loader import DataLoader
-from .nn.nn import NeuralNetwork
+from absa.text.parsed.review import ParsedReview
+from absa.text.opinion.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
+from .loader import DataLoader
+from .nn.nn import NeuralNetwork
+from ...score.f1 import Score
 
 
 class AspectClassifier:
-    """Sentence level aspect classifier
+    """Sentence-level aspect classifier
 
     Attributes
     ----------
@@ -32,7 +32,8 @@ class AspectClassifier:
                  vocabulary: Dict[str, int] = None,
                  emb_matrix: th.Tensor = None,
                  aspect_labels: List[str] = ASPECT_LABELS,
-                 batch_size: int = 100):
+                 batch_size: int = 100,
+                 threshold: np.array = None):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
         self.batch_size = batch_size
         self.aspect_labels = Labels(labels=aspect_labels)
@@ -52,9 +53,14 @@ class AspectClassifier:
         criterion = th.nn.BCEWithLogitsLoss()
         self.loss_func = lambda y_pred, y: criterion(y_pred, y)
 
+        if threshold is not None:
+            self.threshold = threshold
+        else:
+            self.threshold = np.random.random(len(self.aspect_labels)) - 1.0
+
     def fit(self,
-            train_sentences: List[ParsedSentence],
-            val_sentences: List[ParsedSentence] = None,
+            train_texts: List[ParsedReview],
+            val_texts: List[ParsedReview] = None,
             optimizer_class=th.optim.Adam,
             optimizer_params: Dict = frozendict({
                 'lr': 0.01,
@@ -64,7 +70,7 @@ class AspectClassifier:
             fixed_threshold=False,
             save_state=True,
             verbose=False) -> Union[np.array, Tuple[np.array, np.array]]:
-        """Fit on train sentences and save model state.
+        """Fit on train reviews and save model state.
 
         Every epoch consist from 2 stages
         - Train stage
@@ -74,23 +80,21 @@ class AspectClassifier:
             Calculate scores on unseen sentences.
         """
 
-        if init_threshold is None:
-            self.threshold = np.random.random(len(self.aspect_labels)) - 1.0
-        else:
+        if init_threshold is not None:
             self.threshold = init_threshold
 
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, **optimizer_params)
 
-        train_batches = DataLoader(sentences=train_sentences,
+        train_batches = DataLoader(texts=train_texts,
                                    batch_size=self.batch_size,
                                    vocabulary=self.vocabulary,
                                    aspect_labels=self.aspect_labels,
                                    device=self.device)
         train_f1_history = np.empty(shape=(num_epoch, ), dtype=np.float)
 
-        if val_sentences:
-            val_batches = DataLoader(sentences=val_sentences,
+        if val_texts:
+            val_batches = DataLoader(texts=val_texts,
                                      batch_size=self.batch_size,
                                      vocabulary=self.vocabulary,
                                      aspect_labels=self.aspect_labels,
@@ -125,7 +129,7 @@ class AspectClassifier:
             train_f1_history[epoch] = f1_score
 
             # Validation
-            if val_sentences:
+            if val_texts:
                 val_logits, val_labels = [], []
                 self.model.eval()
                 for i, batch in enumerate(val_batches):
@@ -141,7 +145,7 @@ class AspectClassifier:
 
             # todo: logging
 
-        if verbose and (val_sentences is not None):
+        if verbose and (val_texts is not None):
             for epoch in range(num_epoch):
                 epoch_step()
         else:
@@ -153,7 +157,7 @@ class AspectClassifier:
 
         if save_state:
             self.save_model()
-        if val_sentences is not None:
+        if val_texts is not None:
             return train_f1_history, val_f1_history
         return train_f1_history
 
@@ -186,47 +190,49 @@ class AspectClassifier:
         f1 = 2 * (precision * recall) / (precision + recall)
         return f1
 
-    def predict(self, sentences: List[ParsedSentence]) -> List[ParsedSentence]:
+    def predict(self, texts: List[ParsedReview]) -> List[ParsedReview]:
         """Modify passed sentences. Add targets with empty list of nodes.
 
         Parameters
         ----------
-        sentences : List[ParsedSentence]
+        texts : List[ParsedReview]
             Sentences with extracted targets.
 
         Return
         -------
-        sentences : List[ParsedSentence]
+        texts : List[ParsedReview]
             Sentences with defined targets.
         """
-        self.model.eval()
-        sentences = copy.deepcopy(sentences)
-        for sentence in sentences:
-            sentence.reset_targets()
 
-        batches = DataLoader(sentences=sentences,
+        self.model.eval()
+        texts = copy.deepcopy(texts)
+        for text in texts:
+            text.reset_opinions()
+
+        batches = DataLoader(texts=texts,
                              batch_size=self.batch_size,
                              vocabulary=self.vocabulary,
                              aspect_labels=self.aspect_labels,
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
-            pred_sentences_targets = self._get_targets(
+            pred_sentences_targets = self._get_opinions(
                 labels_indexes=logits.to('cpu').data.numpy())
-            for internal_index, targets in enumerate(pred_sentences_targets):
+            for internal_index, opinions in enumerate(pred_sentences_targets):
+                text_index = batch.text_index[internal_index]
                 sentence_index = batch.sentence_index[internal_index]
-                sentences[sentence_index].targets = targets
-        return sentences
+                texts[text_index].sentences[sentence_index].opinions = opinions
+        return texts
 
-    def _get_targets(self, labels_indexes: np.array) -> List[List[Target]]:
-        targets = []
+    def _get_opinions(self, labels_indexes: np.array) -> List[List[Opinion]]:
+        opinions = []
         for sentence_labels in labels_indexes:
-            sentence_targets = []
+            sentence_opinions = []
             labels = [x[0] for x in np.argwhere(sentence_labels > self.threshold)]
             for label in labels:
-                sentence_targets.append(Target(nodes=[], category=self.aspect_labels[label]))
-            targets.append(sentence_targets)
-        return targets
+                sentence_opinions.append(Opinion(nodes=[], category=self.aspect_labels[label]))
+            opinions.append(sentence_opinions)
+        return opinions
 
     def save_model(self):
         """Save model state."""
@@ -249,22 +255,30 @@ class AspectClassifier:
         return classifier
 
     @staticmethod
-    def score(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]):
-        """Score function of classifier.
+    def score(texts: List[ParsedReview], texts_pred: List[ParsedReview]) -> Score:
+        """Macro classification metrics.
 
-        Match score for task 5 sb 1.1 of SemEval2016.
+        Parameters
+        ----------
+        texts : List[Parsed]
+
+        texts_pred : List[]
+
+        todo:
         """
+
         total_labels = 0
         total_predictions = 0
         correct_predictions = 0
 
-        for sentence_index in range(len(sentences)):
-            categories = set([t.category for t in sentences[sentence_index].targets])
-            pred_categories = set([t.category for t in sentences_pred[sentence_index].targets])
+        for text, text_pred in zip(texts, texts_pred):
+            for sentence, sentence_pred in zip(text, text_pred):
+                categories = set([t.category for t in sentence.opinions])
+                pred_categories = set([t.category for t in sentence_pred.opinions])
 
-            correct_predictions += len(categories.intersection(pred_categories))
-            total_labels += len(categories)
-            total_predictions += len(pred_categories)
+                correct_predictions += len(categories.intersection(pred_categories))
+                total_labels += len(categories)
+                total_predictions += len(pred_categories)
 
         if total_predictions == 0:
             return Score(precision=1.0, recall=0.0, f1=0.0)
@@ -274,10 +288,3 @@ class AspectClassifier:
         recall = correct_predictions / total_labels
         f1 = 2 * (precision * recall) / (precision + recall)
         return Score(precision=precision, recall=recall, f1=f1)
-
-
-@dataclass
-class Score:
-    precision: float
-    recall: float
-    f1: float

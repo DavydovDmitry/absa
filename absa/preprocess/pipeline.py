@@ -1,8 +1,9 @@
 import os
-from typing import Dict
+from typing import Dict, List
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
     parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path
+from absa.text.parsed.review import ParsedReview
 from .parse_xml import parse_xml
 from .spell_check import spell_check
 from .dep_parse import dep_parse_reviews
@@ -13,7 +14,7 @@ from ..utils.dump import make_dump, load_dump
 def preprocess_pipeline(vocabulary: Dict = None,
                         is_train: bool = True,
                         skip_spell_check: bool = True,
-                        make_dumps: bool = True):
+                        make_dumps: bool = True) -> List[ParsedReview]:
     """Pipeline for review preprocess
 
     Pipeline:
@@ -40,7 +41,7 @@ def preprocess_pipeline(vocabulary: Dict = None,
     |             V                                                      |
     +--------------------------------------------------------------------+
                   |
-                  |     List[List[ParsedSentence]]
+                  |     List[ParsedReview]
                   V
 
     Make dumps of results of every stage, to not run all stages further.

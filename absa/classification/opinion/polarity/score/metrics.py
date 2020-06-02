@@ -8,7 +8,7 @@ from typing import List
 import logging
 
 from absa import SCORE_DECIMAL_LEN
-from absa.review.parsed.sentence import ParsedSentence
+from absa.text.parsed.sentence import ParsedSentence
 
 
 def get_sb3(sentences: List[ParsedSentence], sentences_pred: List[ParsedSentence]) -> float:

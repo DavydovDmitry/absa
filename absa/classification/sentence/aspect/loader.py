@@ -2,15 +2,16 @@ from typing import List, Dict
 from collections import namedtuple
 
 import torch as th
-import numpy as np
 
 from absa import UNKNOWN_WORD, PAD_WORD
-from absa.review.parsed.sentence import ParsedSentence
+from absa.text.parsed.sentence import ParsedSentence
+from absa.text.parsed.review import ParsedReview
 from absa.labels.labels import Labels
 
 Batch = namedtuple(
     'Batch',
     [
+        'text_index',
         'sentence_index',
         # GPU part. This fields will be passed to GPU.
         'sentence_len',
@@ -34,7 +35,7 @@ class DataLoader:
     """
     def __init__(self,
                  vocabulary: Dict[str, int],
-                 sentences: List[ParsedSentence],
+                 texts: List[ParsedReview],
                  batch_size: int,
                  device: th.device,
                  aspect_labels: Labels,
@@ -47,20 +48,35 @@ class DataLoader:
         self.pad_word = pad_word
         self.aspect_labels = aspect_labels
 
-        data = self.process(sentences)
+        data = self.process(texts)
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def process(self, sentences: List[ParsedSentence]) -> List[Batch]:
-        """Process all sentences"""
+    def process(self, texts: List[ParsedReview]) -> List[Batch]:
+        """Process all texts
+
+        Parameters
+        ----------
+        texts : List[ParsedReview]
+            texts corpus
+
+        Return
+        ------
+        processed : List[Batch]
+            batch elements
+        """
         processed = []
-        for sentence_index, sentence in enumerate(sentences):
-            if len(sentence):
-                processed.append(
-                    self.process_sentence(sentence=sentence, sentence_index=sentence_index))
+        for text_index, text in enumerate(texts):
+            for sentence_index, sentence in enumerate(text):
+                if len(sentence):
+                    processed.append(
+                        self.process_sentence(sentence=sentence,
+                                              text_index=text_index,
+                                              sentence_index=sentence_index))
         return processed
 
-    def process_sentence(self, sentence: ParsedSentence, sentence_index: int) -> Batch:
+    def process_sentence(self, sentence: ParsedSentence, text_index: int,
+                         sentence_index: int) -> Batch:
         """Process one sentence
         """
 
@@ -74,19 +90,12 @@ class DataLoader:
 
         sentence_len = len(sentence.graph.nodes)
 
-        labels = th.LongTensor(sentence_len).fill_(
-            self.aspect_labels.get_index(self.aspect_labels.none_value))
-        for target_index, target in enumerate(sentence.targets):
-            if not target.nodes:
-                continue
-                # todo:
-                # labels[:, np.where(self.aspect_labels == target.category)] = 1.0
-            else:
-                for word_index, word in enumerate(sentence.nodes_sentence_order()):
-                    if word in target.nodes:
-                        labels[word_index] = self.aspect_labels.get_index(target.category)
+        labels = th.FloatTensor(len(self.aspect_labels)).fill_(0.0)
+        for opinion_index, opinion in enumerate(sentence.opinions):
+            labels[self.aspect_labels.get_index(opinion.category)] = 1.0
 
         return Batch(
+            text_index=text_index,
             sentence_index=sentence_index,
             sentence_len=sentence_len,
             embed_ids=embed_ids,
@@ -119,16 +128,16 @@ class DataLoader:
         max_len = max([x.sentence_len for x in batch])
         batch = sort_by_sentence_len(batch=batch)
 
-        sentence_index = np.array([x.sentence_index for x in batch])
         sentence_lens = th.LongTensor([x.sentence_len for x in batch])
 
         embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[self.pad_word])
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
-        labels = th.cat([item.labels for item in batch])
+        labels = th.stack([item.labels for item in batch])
         return Batch(
-            sentence_index=sentence_index,
+            text_index=th.LongTensor([x.text_index for x in batch]),
+            sentence_index=th.LongTensor([x.sentence_index for x in batch]),
             sentence_len=sentence_lens.to(self.device),
             embed_ids=embed_ids.to(self.device),
             labels=labels.to(self.device),

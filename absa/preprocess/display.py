@@ -17,8 +17,8 @@ from typing_extensions import TypedDict
 
 from absa import labeled_reviews_dump_path
 from absa import EXTENDED_POLARITIES
-from absa.review.raw.review import Review
-from absa.review.parsed.sentence import ParsedSentence
+from absa.text.raw.review import Review
+from absa.text.parsed.sentence import ParsedSentence
 
 NODE_SIZE = 500
 ARROW_COLOR = '#e0e0e0'
@@ -203,7 +203,7 @@ class TreeViewer:
         for token_index, token in enumerate(sentence_text):
             color = 'black'
             for target in self.reviews[self.review_index].sentences[
-                    self.sentence_index].targets:
+                    self.sentence_index].opinions:
                 if token_index in target.nodes:
                     color = TEXT_COLORS[target.polarity.upper()]
 
