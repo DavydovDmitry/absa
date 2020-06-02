@@ -28,18 +28,21 @@ log_path = os.path.join(module_path, 'logs')
 
 # --------------------------------- Dumps -------------------------------------
 dumps_path = os.path.join(module_path, 'dumps')
+classifiers_dump_path = os.path.join(dumps_path, 'classifiers')
+data_dump_path = os.path.join(dumps_path, 'data')
 
 vocabulary_dump = os.path.join(dumps_path, 'vocabulary')
 embed_matrix_path = os.path.join(dumps_path, 'embed_matrix')
 
 # Processed data
-raw_reviews_dump_path = os.path.join(dumps_path, 'reviews')
-checked_reviews_dump_path = os.path.join(dumps_path, 'checked_reviews')
-parsed_reviews_dump_path = os.path.join(dumps_path, 'dep_parsed_sentence')
+raw_reviews_dump_path = os.path.join(data_dump_path, 'reviews')
+checked_reviews_dump_path = os.path.join(data_dump_path, 'checked_reviews')
+parsed_reviews_dump_path = os.path.join(data_dump_path, 'dep_parsed_sentence')
 
 # classifiers
-sentence_aspect_classifier_dump_path = os.path.join(dumps_path,
+sentence_aspect_classifier_dump_path = os.path.join(classifiers_dump_path,
                                                     'sentence_aspect_classifier.pt')
-target_aspect_classifier_dump_path = os.path.join(dumps_path, 'target_aspect_classifier.pt')
-target_polarity_classifier_dump_path = os.path.join(dumps_path,
-                                                    'target_polarity_classifier.pt')
+opinion_aspect_classifier_dump_path = os.path.join(classifiers_dump_path,
+                                                   'opinion_aspect_classifier.pt')
+opinion_polarity_classifier_dump_path = os.path.join(classifiers_dump_path,
+                                                     'opinion_polarity_classifier.pt')

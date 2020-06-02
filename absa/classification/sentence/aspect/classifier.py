@@ -9,14 +9,13 @@ from scipy.optimize import minimize as minimize
 from tqdm import tqdm
 
 from absa import sentence_aspect_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed.sentence import ParsedSentence
-from absa.review.parsed.review import ParsedReview
-from absa.review.target.target import Target
+from absa.text.parsed.review import ParsedReview
+from absa.text.opinion.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
-from .score import Score
+from ...score.f1 import Score
 
 
 class AspectClassifier:
@@ -208,7 +207,7 @@ class AspectClassifier:
         self.model.eval()
         texts = copy.deepcopy(texts)
         for text in texts:
-            text.reset_targets()
+            text.reset_opinions()
 
         batches = DataLoader(texts=texts,
                              batch_size=self.batch_size,
@@ -217,23 +216,23 @@ class AspectClassifier:
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
-            pred_sentences_targets = self._get_targets(
+            pred_sentences_targets = self._get_opinions(
                 labels_indexes=logits.to('cpu').data.numpy())
-            for internal_index, targets in enumerate(pred_sentences_targets):
+            for internal_index, opinions in enumerate(pred_sentences_targets):
                 text_index = batch.text_index[internal_index]
                 sentence_index = batch.sentence_index[internal_index]
-                texts[text_index].sentences[sentence_index].targets = targets
+                texts[text_index].sentences[sentence_index].opinions = opinions
         return texts
 
-    def _get_targets(self, labels_indexes: np.array) -> List[List[Target]]:
-        targets = []
+    def _get_opinions(self, labels_indexes: np.array) -> List[List[Opinion]]:
+        opinions = []
         for sentence_labels in labels_indexes:
-            sentence_targets = []
+            sentence_opinions = []
             labels = [x[0] for x in np.argwhere(sentence_labels > self.threshold)]
             for label in labels:
-                sentence_targets.append(Target(nodes=[], category=self.aspect_labels[label]))
-            targets.append(sentence_targets)
-        return targets
+                sentence_opinions.append(Opinion(nodes=[], category=self.aspect_labels[label]))
+            opinions.append(sentence_opinions)
+        return opinions
 
     def save_model(self):
         """Save model state."""
@@ -274,8 +273,8 @@ class AspectClassifier:
 
         for text, text_pred in zip(texts, texts_pred):
             for sentence, sentence_pred in zip(text, text_pred):
-                categories = set([t.category for t in sentence.targets])
-                pred_categories = set([t.category for t in sentence_pred.targets])
+                categories = set([t.category for t in sentence.opinions])
+                pred_categories = set([t.category for t in sentence_pred.opinions])
 
                 correct_predictions += len(categories.intersection(pred_categories))
                 total_labels += len(categories)

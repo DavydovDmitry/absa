@@ -32,6 +32,6 @@ def test_dep_parsing():
 
     for raw_review, parsed_review in zip(reviews, parsed_reviews):
         for raw_sentence, parsed_sentence in zip(raw_review, parsed_review):
-            if not parsed_sentence.is_targets_contain_unknown():
+            if not parsed_sentence.is_opinions_contain_unknown():
                 parsed_sentence = parsed_sentence.to_specified_sentence(text=raw_sentence.text)
                 assert raw_sentence == parsed_sentence

@@ -10,7 +10,7 @@ import requests
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.review.raw.review import Review
+from absa.text.raw.review import Review
 
 
 def split_text(text: List[str], line_length=300) -> List[List[str]]:
@@ -144,10 +144,10 @@ def spell_check(reviews: List[Review],
                 while prev_index < sentence_length:
                     # Many to one
                     if not sentence_copy.text[curr_index]:
-                        for target_index, target in enumerate(sentence_copy.targets):
+                        for target_index, target in enumerate(sentence_copy.opinions):
                             for node_index, node in enumerate(target.nodes):
                                 if node > curr_index:
-                                    sentence_copy.targets[target_index].nodes[node_index] -= 1
+                                    sentence_copy.opinions[target_index].nodes[node_index] -= 1
                         sentence_copy.text.pop(curr_index)
 
                         if curr_index in spell_checked2init[review_index][sentence_index]:
@@ -171,15 +171,15 @@ def spell_check(reviews: List[Review],
                             if add_node_index == 0:
                                 continue
 
-                            for target_index, target in enumerate(sentence_copy.targets):
+                            for target_index, target in enumerate(sentence_copy.opinions):
                                 # for next targets (include current)
                                 for node_index, node in enumerate(target.nodes):
                                     if node > curr_index:
-                                        sentence_copy.targets[target_index].nodes[
+                                        sentence_copy.opinions[target_index].nodes[
                                             node_index] += 1
                                 # for current target
                                 if curr_index in target.nodes:
-                                    sentence_copy.targets[target_index].nodes.insert(
+                                    sentence_copy.opinions[target_index].nodes.insert(
                                         target.nodes.index(curr_index) + 1,
                                         curr_index + add_node_index)
                         n_nodes = len(sentence_copy.text[curr_index])

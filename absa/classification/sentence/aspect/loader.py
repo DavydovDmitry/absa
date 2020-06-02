@@ -4,8 +4,8 @@ from collections import namedtuple
 import torch as th
 
 from absa import UNKNOWN_WORD, PAD_WORD
-from absa.review.parsed.sentence import ParsedSentence
-from absa.review.parsed.review import ParsedReview
+from absa.text.parsed.sentence import ParsedSentence
+from absa.text.parsed.review import ParsedReview
 from absa.labels.labels import Labels
 
 Batch = namedtuple(
@@ -91,8 +91,8 @@ class DataLoader:
         sentence_len = len(sentence.graph.nodes)
 
         labels = th.FloatTensor(len(self.aspect_labels)).fill_(0.0)
-        for target_index, target in enumerate(sentence.targets):
-            labels[self.aspect_labels.get_index(target.category)] = 1.0
+        for opinion_index, opinion in enumerate(sentence.opinions):
+            labels[self.aspect_labels.get_index(opinion.category)] = 1.0
 
         return Batch(
             text_index=text_index,

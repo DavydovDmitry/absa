@@ -3,7 +3,7 @@
 
 from typing import List
 
-from absa.review.raw.sentence import Sentence
+from absa.text.raw.sentence import Sentence
 
 
 class Review:

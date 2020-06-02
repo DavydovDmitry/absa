@@ -3,9 +3,10 @@ from typing import List, Union
 from .polarity import Polarity, DEFAULT_POLARITY
 
 
-class Target:
-    """
-    Represent target as list of indices. Each index is position in text of
+class Opinion:
+    """Opinion representation
+
+    Represent aspect term as list of indices. Each index is position in text of
     sentence.
 
     Attributes
@@ -28,8 +29,8 @@ class Target:
     def __hash__(self):
         return hash((tuple(self.nodes), self.category))
 
-    def __eq__(self, other: 'Target'):
-        if not isinstance(other, Target):
+    def __eq__(self, other: 'Opinion'):
+        if not isinstance(other, Opinion):
             return False
         return (self.nodes == other.nodes) & \
                (self.category == other.category) & \

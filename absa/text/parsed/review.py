@@ -14,6 +14,6 @@ class ParsedReview:
         for sentence in self.sentences:
             yield sentence
 
-    def reset_targets(self):
+    def reset_opinions(self):
         for sentence in self:
-            sentence.reset_targets()
+            sentence.reset_opinions()

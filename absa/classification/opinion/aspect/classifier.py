@@ -10,15 +10,15 @@ from frozendict import frozendict
 from sklearn.metrics import f1_score
 from tqdm import tqdm
 
-from absa import target_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed.review import ParsedReview
-from absa.review.parsed.sentence import ParsedSentence
-from absa.review.target.target import Target
+from absa import opinion_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
+from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.sentence import ParsedSentence
+from absa.text.opinion.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
-from .score import Score
+from ...score.f1 import Score
 
 
 class AspectClassifier:
@@ -184,81 +184,81 @@ class AspectClassifier:
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
             pred_labels = th.argmax(logits.to('cpu'), dim=1)
-            pred_sentences_targets = self._get_targets(
+            pred_sentences_opinions = self._get_opinions(
                 labels_indexes=pred_labels,
                 sentence_len=[x.item() for x in batch.sentence_len.to('cpu')])
-            for internal_index, targets in enumerate(pred_sentences_targets):
+            for internal_index, opinions in enumerate(pred_sentences_opinions):
                 text_index = batch.text_index[internal_index]
                 sentence_index = batch.sentence_index[internal_index]
                 sentence_nodes = texts[text_index].sentences[
                     sentence_index].nodes_sentence_order()
 
-                explicit_targets = []
+                explicit_opinions = []
                 explicit_categories = set()
-                for target in targets:
-                    target.nodes = [sentence_nodes[x] for x in target.nodes]
-                    explicit_targets.append(target)
-                    explicit_categories.add(target.category)
-                for target in texts[text_index].sentences[sentence_index].targets:
-                    if (not target.nodes) and (target.category in explicit_categories):
-                        texts[text_index].sentences[sentence_index].targets.remove(target)
-                texts[text_index].sentences[sentence_index].targets.extend(explicit_targets)
+                for opinion in opinions:
+                    opinion.nodes = [sentence_nodes[x] for x in opinion.nodes]
+                    explicit_opinions.append(opinion)
+                    explicit_categories.add(opinion.category)
+                for opinion in texts[text_index].sentences[sentence_index].opinions:
+                    if (not opinion.nodes) and (opinion.category in explicit_categories):
+                        texts[text_index].sentences[sentence_index].opinions.remove(opinion)
+                texts[text_index].sentences[sentence_index].opinions.extend(explicit_opinions)
         return texts
 
-    def _get_targets(self, labels_indexes: th.Tensor,
-                     sentence_len: List[int]) -> List[List[Target]]:
+    def _get_opinions(self, labels_indexes: th.Tensor,
+                      sentence_len: List[int]) -> List[List[Opinion]]:
         """Convert predictions to targets
 
         Return
         ------
-        targets : List[List[Target]]
+        targets : List[List[Opinion]]
             sentences and it's targets
         """
-        targets = []
-        for indexes in th.split(labels_indexes, sentence_len):
-            targets.append(self._get_target(indexes.data.numpy()))
-        return targets
 
-    def _get_target(self, labels_indexes: np.array) -> List[Target]:
-        targets = []
+        opinions = []
+        for indexes in th.split(labels_indexes, sentence_len):
+            opinions.append(self._get_opinion(indexes.data.numpy()))
+        return opinions
+
+    def _get_opinion(self, labels_indexes: np.array) -> List[Opinion]:
+        opinions = []
 
         words_indexes = [
             x[0] for x in np.argwhere(
                 labels_indexes != self.aspect_labels.get_index(self.aspect_labels.none_value))
         ]
         if words_indexes:
-            target_words = [words_indexes[0]]
-            target_label_index = labels_indexes[target_words[0]]
+            aspect_term = [words_indexes[0]]
+            aspect_label_index = labels_indexes[aspect_term[0]]
 
             for word_index in words_indexes:
                 label_index = labels_indexes[word_index]
-                if (word_index - target_words[-1] == 1) and (label_index
-                                                             == target_label_index):
-                    target_words.append(word_index)
+                if (word_index - aspect_term[-1] == 1) and (label_index == aspect_label_index):
+                    aspect_term.append(word_index)
                 else:
-                    targets.append(
-                        Target(nodes=target_words,
-                               category=self.aspect_labels[target_label_index]))
-                    target_words = [word_index]
-                    target_label_index = label_index
-            if target_words:  # always
-                targets.append(
-                    Target(nodes=target_words,
-                           category=self.aspect_labels[target_label_index]))
+                    opinions.append(
+                        Opinion(nodes=aspect_term,
+                                category=self.aspect_labels[aspect_label_index]))
+                    aspect_term = [word_index]
+                    aspect_label_index = label_index
+            if aspect_term:  # always
+                opinions.append(
+                    Opinion(nodes=aspect_term,
+                            category=self.aspect_labels[aspect_label_index]))
 
-        return targets
+        return opinions
 
     def save_model(self):
         """Save model state."""
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
-        }, target_aspect_classifier_dump_path)
+        }, opinion_aspect_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'AspectClassifier':
         """Load pretrained model."""
-        checkpoint = th.load(target_aspect_classifier_dump_path)
+        checkpoint = th.load(opinion_aspect_classifier_dump_path)
         model = checkpoint['model']
         classifier = AspectClassifier(vocabulary=checkpoint['vocabulary'],
                                       emb_matrix=model['nn.embed.weight'])
@@ -273,13 +273,13 @@ class AspectClassifier:
 
         for text, text_pred in zip(texts, texts_pred):
             for sentence, sentence_pred in zip(text, text_pred):
-                for y in sentence.targets:
-                    for y_pred in sentence_pred.targets:
+                for y in sentence.opinions:
+                    for y_pred in sentence_pred.opinions:
                         if (y.nodes == y_pred.nodes) and (y.category == y_pred.category):
                             correct_predictions += 1
                             break
-                total_targets += len(sentence.targets)
-                total_predictions += len(sentence_pred.targets)
+                total_targets += len(sentence.opinions)
+                total_predictions += len(sentence_pred.opinions)
 
         if total_predictions == 0:
             return Score(precision=1.0, recall=0.0, f1=0.0)

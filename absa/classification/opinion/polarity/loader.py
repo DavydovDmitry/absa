@@ -3,11 +3,10 @@ from collections import namedtuple
 
 import torch as th
 import dgl
-import networkx as nx
 
 from absa import UNKNOWN_WORD, PAD_WORD
-from absa.review.parsed.review import ParsedReview
-from absa.review.parsed.sentence import ParsedSentence
+from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.sentence import ParsedSentence
 
 Batch = namedtuple(
     'Batch',
@@ -15,13 +14,13 @@ Batch = namedtuple(
         # Indexes to set classification results to sentence
         'text_index',
         'sentence_index',
-        'target_index',
+        'opinion_index',
         # GPU part. This fields will be passed to GPU.
         'sentence_len',
         'embed_ids',
         'graph',
         # CPU part
-        'target_mask',
+        'term_mask',
         'polarity'
     ])
 
@@ -68,7 +67,7 @@ class DataLoader:
         processed = []
         for text_index, text in enumerate(texts):
             for sentence_index, sentence in enumerate(text):
-                if sentence.graph.nodes and sentence.targets:
+                if sentence.graph.nodes and sentence.opinions:
                     processed.extend(
                         self.process_sentence(sentence=sentence,
                                               text_index=text_index,
@@ -99,24 +98,24 @@ class DataLoader:
         graph = dgl.DGLGraph()
         graph.from_networkx(sentence.graph)
 
-        for target_index, target in enumerate(sentence.targets):
-            if not target.nodes:
-                target_mask = [1 for _ in embed_ids]
+        for opinion_index, opinion in enumerate(sentence.opinions):
+            if not opinion.nodes:
+                term_mask = [1 for _ in embed_ids]
             else:
-                target_mask = [0 for _ in embed_ids]
+                term_mask = [0 for _ in embed_ids]
                 for word_index, word in enumerate(sentence.nodes_sentence_order()):
-                    if word in target.nodes:
-                        target_mask[word_index] = 1
-            polarity = target.polarity.value
+                    if word in opinion.nodes:
+                        term_mask[word_index] = 1
+            polarity = opinion.polarity.value
 
             processed.append(
                 Batch(text_index=text_index,
                       sentence_index=sentence_index,
-                      target_index=target_index,
+                      opinion_index=opinion_index,
                       sentence_len=sentence_len,
                       embed_ids=embed_ids,
                       graph=graph,
-                      target_mask=th.FloatTensor(target_mask),
+                      term_mask=th.FloatTensor(term_mask),
                       polarity=polarity))
         return processed
 
@@ -146,22 +145,19 @@ class DataLoader:
         max_len = max([x.sentence_len for x in batch])
         batch = sort_by_sentence_len(batch=batch)
 
-        target_index = th.LongTensor([x.target_index for x in batch])
-        sentence_lens = th.LongTensor([x.sentence_len for x in batch])
-        polarity = th.LongTensor([x.polarity for x in batch])
-
         embed_ids = th.LongTensor(batch_size, max_len).fill_(self.vocabulary[self.pad_word])
         for i, b in enumerate(batch):
             embed_ids[i, :b.sentence_len] = th.LongTensor(b.embed_ids)
 
         return Batch(text_index=th.LongTensor([x.text_index for x in batch]),
                      sentence_index=th.LongTensor([x.sentence_index for x in batch]),
-                     target_index=target_index,
-                     sentence_len=sentence_lens.to(self.device),
+                     opinion_index=th.LongTensor([x.opinion_index for x in batch]),
+                     sentence_len=th.LongTensor([x.sentence_len
+                                                 for x in batch]).to(self.device),
                      embed_ids=embed_ids.to(self.device),
                      graph=dgl.batch([item.graph for item in batch]),
-                     target_mask=th.cat([item.target_mask for item in batch]),
-                     polarity=polarity)
+                     term_mask=th.cat([item.term_mask for item in batch]),
+                     polarity=th.LongTensor([x.polarity for x in batch]))
 
     def __iter__(self) -> Batch:
         """Iterate over batches - chunks of dataset"""

@@ -11,10 +11,10 @@ from sklearn import metrics
 from frozendict import frozendict
 from tqdm import tqdm
 
-from absa import SCORE_DECIMAL_LEN, target_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.review.parsed.review import ParsedReview
-from absa.review.parsed.sentence import ParsedSentence
-from absa.review.target.target import Polarity
+from absa import SCORE_DECIMAL_LEN, opinion_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
+from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.sentence import ParsedSentence
+from absa.text.opinion.opinion import Polarity
 from .loader import DataLoader, Batch
 from .nn.nn import NeurelNetwork
 
@@ -53,7 +53,7 @@ class PolarityClassifier:
         """Make a forward step and return metrics"""
         logits = self.model(embed_ids=batch.embed_ids,
                             graph=batch.graph,
-                            target_mask=batch.target_mask,
+                            term_mask=batch.term_mask,
                             sentence_len=batch.sentence_len)
         loss = F.cross_entropy(logits, batch.polarity, reduction='mean')
         corrects = (th.max(logits, 1)[1].view(
@@ -177,15 +177,15 @@ class PolarityClassifier:
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids,
                                 graph=batch.graph,
-                                target_mask=batch.target_mask,
+                                term_mask=batch.term_mask,
                                 sentence_len=batch.sentence_len)
             pred_labels = np.argmax(logits.data.numpy(), axis=1).tolist()
             for item_index, item in enumerate(pred_labels):
                 text_index = batch.text_index[item_index]
                 sentence_index = batch.sentence_index[item_index]
-                target_index = batch.target_index[item_index]
-                texts[text_index].sentences[sentence_index].targets[target_index].set_polarity(
-                    item)
+                opinion_index = batch.opinion_index[item_index]
+                texts[text_index].sentences[sentence_index].opinions[
+                    opinion_index].set_polarity(item)
         return texts
 
     def save_model(self):
@@ -193,12 +193,12 @@ class PolarityClassifier:
         th.save({
             'vocabulary': self.vocabulary,
             'model': self.model.state_dict()
-        }, target_polarity_classifier_dump_path)
+        }, opinion_polarity_classifier_dump_path)
 
     @staticmethod
     def load_model() -> 'PolarityClassifier':
         """Load pretrained model."""
-        checkpoint = th.load(target_polarity_classifier_dump_path)
+        checkpoint = th.load(opinion_polarity_classifier_dump_path)
         model = checkpoint['model']
         classifier = PolarityClassifier(vocabulary=checkpoint['vocabulary'],
                                         emb_matrix=model['nn.embed.weight'])
@@ -219,20 +219,20 @@ class PolarityClassifier:
 
         for t_index, (t, t_pred) in enumerate(zip(texts, texts_pred)):
             for s_index, (s, s_pred) in enumerate(zip(t, t_pred)):
-                if (len(s.targets) != len(s_pred.targets)) or \
-                   (len(set(hash(t) for t in s.targets) &
-                        set(hash(t) for t in s_pred.targets)) != len(s.targets)):
-                    logging.error(len(set(s.targets).intersection(set(s_pred.targets))))
+                if (len(s.opinions) != len(s_pred.opinions)) or \
+                   (len(set(hash(t) for t in s.opinions) &
+                        set(hash(t) for t in s_pred.opinions)) != len(s.opinions)):
+                    logging.error(len(set(s.opinions).intersection(set(s_pred.opinions))))
                     logging.error('-' * 50 + ' Original  targets ' + '-' * 50)
-                    for l_target in s.targets:
+                    for l_target in s.opinions:
                         logging.error(l_target)
                     logging.error('-' * 50 + ' Predicted targets ' + '-' * 50)
-                    for l_target_pred in s_pred.targets:
+                    for l_target_pred in s_pred.opinions:
                         logging.error(l_target_pred)
                     raise ValueError(f'Targets mismatch in {t_index} text {s_index} sentence.')
 
-                for target in s.targets:
-                    for target_pred in s_pred.targets:
+                for target in s.opinions:
+                    for target_pred in s_pred.opinions:
                         if (target.nodes == target_pred.nodes) and (target.category
                                                                     == target_pred.category):
                             if target.polarity == target_pred.polarity:

@@ -18,9 +18,9 @@ from absa.utils.embedding import Embeddings
 from absa.utils.dump import load_dump
 from absa.preprocess.pipeline import preprocess_pipeline
 from absa.classification.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
-from absa.classification.opinion.aspect.classifier import AspectClassifier as TargetAspectClassifier
+from absa.classification.opinion.aspect.classifier import AspectClassifier as OpinionAspectClassifier
 from absa.classification.opinion.polarity.classifier import PolarityClassifier
-from absa.review.parsed.review import ParsedReview
+from absa.text.parsed.review import ParsedReview
 
 SEED = 42
 
@@ -57,7 +57,7 @@ def sentence_aspect_classification(train_reviews: List[ParsedReview],
 
     test_reviews_pred = copy.deepcopy(test_reviews)
     for review in test_reviews_pred:
-        review.reset_targets()
+        review.reset_opinions()
 
     test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
@@ -65,13 +65,13 @@ def sentence_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def target_aspect_classification(train_reviews: List[ParsedReview],
-                                 test_reviews: List[ParsedReview],
-                                 test_reviews_pred: List[ParsedReview]) -> List[ParsedReview]:
+def opinion_aspect_classification(train_reviews: List[ParsedReview],
+                                  test_reviews: List[ParsedReview],
+                                  test_reviews_pred: List[ParsedReview]) -> List[ParsedReview]:
     if True:
-        classifier = TargetAspectClassifier.load_model()
+        classifier = OpinionAspectClassifier.load_model()
     else:
-        classifier = TargetAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+        classifier = OpinionAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
         classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
 
     test_reviews_pred = classifier.predict(test_reviews_pred)
@@ -80,8 +80,8 @@ def target_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def target_polarity_classification(train_reviews: List[ParsedReview],
-                                   test_reviews: List[ParsedReview]) -> List[ParsedReview]:
+def opinion_polarity_classification(train_reviews: List[ParsedReview],
+                                    test_reviews: List[ParsedReview]) -> List[ParsedReview]:
     if True:
         classifier = PolarityClassifier.load_model()
     else:
@@ -91,7 +91,7 @@ def target_polarity_classification(train_reviews: List[ParsedReview],
     test_reviews_pred = copy.deepcopy(test_reviews)
     for review in test_reviews_pred:
         for sentence in review.sentences:
-            sentence.reset_targets_polarities()
+            sentence.reset_opinions_polarities()
 
     test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     test_reviews_pred = sentence_aspect_classification(train_reviews=train_reviews,
                                                        test_reviews=test_reviews)
-    target_aspect_classification(train_reviews=train_reviews,
-                                 test_reviews=test_reviews,
-                                 test_reviews_pred=test_reviews_pred)
-    target_polarity_classification(train_reviews=train_reviews, test_reviews=test_reviews)
+    opinion_aspect_classification(train_reviews=train_reviews,
+                                  test_reviews=test_reviews,
+                                  test_reviews_pred=test_reviews_pred)
+    opinion_polarity_classification(train_reviews=train_reviews, test_reviews=test_reviews)

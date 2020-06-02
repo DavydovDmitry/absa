@@ -3,11 +3,11 @@ from typing import List, Dict
 import networkx as nx
 
 from ..raw.sentence import Sentence
-from ..target.target import Target
-from ..target.mixin import TargetMixin
+from ..opinion.opinion import Opinion
+from ..opinion.mixin import OpinionMixin
 
 
-class ParsedSentence(TargetMixin):
+class ParsedSentence(OpinionMixin):
     """
     Attributes
     ----------
@@ -32,10 +32,10 @@ class ParsedSentence(TargetMixin):
                  id2lemma: Dict[int, str],
                  id2dep: Dict[int, str],
                  id2init_id: Dict[int, int],
-                 targets: List[Target] = None):
-        if targets is None:
-            targets = []
-        super().__init__(targets=targets)
+                 opinions: List[Opinion] = None):
+        if opinions is None:
+            opinions = []
+        super().__init__(opinions=opinions)
 
         self.graph = graph
         self.id2word = id2word
@@ -69,18 +69,14 @@ class ParsedSentence(TargetMixin):
             if node_id in self.id2lemma
         ]
 
-    def reset_targets(self):
-        """Reset list of targets"""
-        self.targets = []
-
-    def reset_targets_polarities(self):
+    def reset_opinions_polarities(self):
         """Reset only polarities of targets"""
-        for target in self.targets:
-            target.reset_polarity()
+        for opinion in self.opinions:
+            opinion.reset_polarity()
 
-    def is_targets_contain_unknown(self) -> bool:
-        for target in self.targets:
-            for node in target.nodes:
+    def is_opinions_contain_unknown(self) -> bool:
+        for opinion in self.opinions:
+            for node in opinion.nodes:
                 if not self.is_known(node):
                     return False
         return True
@@ -98,14 +94,15 @@ class ParsedSentence(TargetMixin):
             if parsed_node_id in self.id2word:
                 text.append(self.id2word[parsed_node_id])
 
-        targets = []
-        for target in self.targets:
-            target_nodes = []
-            for parsed_node_id in target.nodes:
-                target_nodes.append(self.id2init_id[parsed_node_id])
-            targets.append(
-                Target(nodes=target_nodes, category=target.category, polarity=target.polarity))
-        return Sentence(text=text, targets=targets)
+        opinions = []
+        for opinion in self.opinions:
+            opinions.append(
+                Opinion(nodes=[
+                    self.id2init_id[parsed_node_id] for parsed_node_id in opinion.nodes
+                ],
+                        category=opinion.category,
+                        polarity=opinion.polarity))
+        return Sentence(text=text, opinions=opinions)
 
     def to_specified_sentence(self, text: List[str]) -> Sentence:
         """Convert to instance of Sentence class with specified text
@@ -115,15 +112,14 @@ class ParsedSentence(TargetMixin):
         sentence : Sentence
         """
 
-        targets = []
-        if self.targets:
-            for target in self.targets:
-                nodes = []
-                for node in target.nodes:
-                    node = self.id2init_id[node]
-                    if node not in nodes:
-                        nodes.append(node)
-                targets.append(
-                    Target(nodes=nodes, category=target.category, polarity=target.polarity))
+        opinions = []
+        for opinion in self.opinions:
+            nodes = []
+            for node in opinion.nodes:
+                node = self.id2init_id[node]
+                if node not in nodes:
+                    nodes.append(node)
+            opinions.append(
+                Opinion(nodes=nodes, category=opinion.category, polarity=opinion.polarity))
 
-        return Sentence(text=text, targets=targets)
+        return Sentence(text=text, opinions=opinions)
