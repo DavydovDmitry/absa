@@ -1,9 +1,3 @@
-*****
-ABSA
-*****
-
-This is pipeline for aspect-based sentiment analysis.
-
 ----------
 Execution
 ----------
