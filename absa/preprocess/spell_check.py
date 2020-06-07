@@ -10,7 +10,7 @@ import requests
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.text.raw.review import Review
+from absa.text.raw.text import Text
 
 
 def split_text(text: List[str], line_length=300) -> List[List[str]]:
@@ -48,8 +48,8 @@ def node_preprocess(node: str) -> str:
     return node
 
 
-def spell_check(reviews: List[Review],
-                start_review_index=0) -> Tuple[List[Review], List[List[Dict]]]:
+def spell_check(reviews: List[Text],
+                start_review_index=0) -> Tuple[List[Text], List[List[Dict]]]:
     """Return reviews with correct spelling.
 
     Using yandex Speller API. By the way yandex has a limit for requests params
@@ -60,7 +60,6 @@ def spell_check(reviews: List[Review],
     """
     url = 'https://speller.yandex.net/services/spellservice.json/checkText'
 
-    spell_checked2init = [[dict() for _ in review.sentences] for review in reviews]
     logging.info('Start spell checking...')
     with tqdm(total=len(reviews), ncols=PROGRESSBAR_COLUMNS_NUM,
               file=sys.stdout) as progress_bar:

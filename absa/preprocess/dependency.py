@@ -8,7 +8,7 @@ import stanfordnlp
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
-from absa.text.raw.review import Review
+from absa.text.raw.text import Text
 from absa.text.opinion.opinion import Opinion
 from absa.text.parsed.sentence import ParsedSentence
 from absa.text.parsed.review import ParsedReview
@@ -16,7 +16,7 @@ from absa.text.parsed.review import ParsedReview
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def dep_parse_reviews(reviews: List[Review], nlp: stanfordnlp.Pipeline) -> List[ParsedReview]:
+def dep_parse_reviews(reviews: List[Text], nlp: stanfordnlp.Pipeline) -> List[ParsedReview]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -36,7 +36,7 @@ def dep_parse_reviews(reviews: List[Review], nlp: stanfordnlp.Pipeline) -> List[
 
     Parameters
     ----------
-    reviews: list[Review]
+    reviews: list[Text]
         list of raw reviews
     nlp: stanfordnlp.Pipeline
         pipeline for text processing

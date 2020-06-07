@@ -26,6 +26,9 @@ word2vec_model_path = os.path.join(embeddings_path, 'tayga_upos_skipgram_300_2_2
 images_path = os.path.join(module_path, 'analysis', 'images')
 log_path = os.path.join(module_path, 'logs')
 
+input_path = os.path.join(module_path, 'input')
+output_path = os.path.join(module_path, 'output')
+
 # --------------------------------- Dumps -------------------------------------
 dumps_path = os.path.join(module_path, 'dumps')
 classifiers_dump_path = os.path.join(dumps_path, 'classifiers')

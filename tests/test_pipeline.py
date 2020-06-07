@@ -3,14 +3,14 @@ import os
 from absa.utils.embedding import Embeddings
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
-from absa.preprocess.parse_xml import parse_xml
-from absa.preprocess.dep_parse import dep_parse_reviews
-from . import SemEval2016_filename, test_dumps_path, RAW_POSTFIX, SPELL_POSTFIX, DEP_POSTFIX, SemEval2016_pathway
+from absa.input.semeval2016 import from_xml
+from absa.preprocess.dependency import dep_parse_reviews
+from . import SemEval2016_filename, test_dumps_path, RAW_POSTFIX, DEP_POSTFIX, SemEval2016_pathway
 
 
 def test_xml_parsing_basic():
     vocabulary = Embeddings.vocabulary
-    reviews = parse_xml(vocabulary=vocabulary, pathway=SemEval2016_pathway)
+    reviews = from_xml(vocabulary=vocabulary, pathway=SemEval2016_pathway)
     make_dump(obj=reviews,
               pathway=os.path.join(test_dumps_path, SemEval2016_filename + RAW_POSTFIX))
 
