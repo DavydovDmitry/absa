@@ -17,7 +17,7 @@ from absa.preprocess.pipeline import preprocess_pipeline
 from absa.classification.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
 from absa.classification.opinion.aspect.classifier import AspectClassifier as OpinionAspectClassifier
 from absa.classification.opinion.polarity.classifier import PolarityClassifier
-from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.text import ParsedText
 
 
 def configure_logging():
@@ -42,8 +42,8 @@ def configure_logging():
     root_logger.addHandler(file_handler)
 
 
-def sentence_aspect_classification(train_reviews: List[ParsedReview],
-                                   test_reviews: List[ParsedReview]) -> List[ParsedReview]:
+def sentence_aspect_classification(train_reviews: List[ParsedText],
+                                   test_reviews: List[ParsedText]) -> List[ParsedText]:
     if False:
         classifier = SentenceAspectClassifier.load_model()
     else:
@@ -60,9 +60,9 @@ def sentence_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def opinion_aspect_classification(train_reviews: List[ParsedReview],
-                                  test_reviews: List[ParsedReview],
-                                  test_reviews_pred: List[ParsedReview]) -> List[ParsedReview]:
+def opinion_aspect_classification(train_reviews: List[ParsedText],
+                                  test_reviews: List[ParsedText],
+                                  test_reviews_pred: List[ParsedText]) -> List[ParsedText]:
     if False:
         classifier = OpinionAspectClassifier.load_model()
     else:
@@ -75,8 +75,8 @@ def opinion_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def opinion_polarity_classification(train_reviews: List[ParsedReview],
-                                    test_reviews: List[ParsedReview]) -> List[ParsedReview]:
+def opinion_polarity_classification(train_reviews: List[ParsedText],
+                                    test_reviews: List[ParsedText]) -> List[ParsedText]:
     if False:
         classifier = PolarityClassifier.load_model()
     else:

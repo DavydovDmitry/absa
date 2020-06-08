@@ -14,7 +14,7 @@ import torch as th
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
     parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, log_path
-from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.text import ParsedText
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
 from absa.utils.embedding import Embeddings
@@ -53,7 +53,7 @@ def configure_logging():
 def preprocess_pipeline(vocabulary: Dict = None,
                         is_train: bool = True,
                         skip_spell_check: bool = True,
-                        make_dumps: bool = True) -> List[ParsedReview]:
+                        make_dumps: bool = True) -> List[ParsedText]:
 
     # Set postfix for train/test data
     if is_train:
@@ -78,8 +78,7 @@ def preprocess_pipeline(vocabulary: Dict = None,
     # Spellcheck
     if not skip_spell_check:
         if os.path.isfile(checked_reviews_dump_path + appendix):
-            reviews, spell_checked2init = load_dump(pathway=checked_reviews_dump_path +
-                                                    appendix)
+            reviews = load_dump(pathway=checked_reviews_dump_path + appendix)
         else:
             reviews = spell_check(reviews)
             if make_dumps:
@@ -97,8 +96,8 @@ def preprocess_pipeline(vocabulary: Dict = None,
     return parsed_reviews
 
 
-def sentence_aspect_classification(train_reviews: List[ParsedReview],
-                                   test_reviews: List[ParsedReview]) -> List[ParsedReview]:
+def sentence_aspect_classification(train_reviews: List[ParsedText],
+                                   test_reviews: List[ParsedText]) -> List[ParsedText]:
     if True:
         classifier = SentenceAspectClassifier.load_model()
     else:
@@ -115,9 +114,9 @@ def sentence_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def opinion_aspect_classification(train_reviews: List[ParsedReview],
-                                  test_reviews: List[ParsedReview],
-                                  test_reviews_pred: List[ParsedReview]) -> List[ParsedReview]:
+def opinion_aspect_classification(train_reviews: List[ParsedText],
+                                  test_reviews: List[ParsedText],
+                                  test_reviews_pred: List[ParsedText]) -> List[ParsedText]:
     if True:
         classifier = OpinionAspectClassifier.load_model()
     else:
@@ -130,8 +129,8 @@ def opinion_aspect_classification(train_reviews: List[ParsedReview],
     return test_reviews_pred
 
 
-def opinion_polarity_classification(train_reviews: List[ParsedReview],
-                                    test_reviews: List[ParsedReview]) -> List[ParsedReview]:
+def opinion_polarity_classification(train_reviews: List[ParsedText],
+                                    test_reviews: List[ParsedText]) -> List[ParsedText]:
     if True:
         classifier = PolarityClassifier.load_model()
     else:

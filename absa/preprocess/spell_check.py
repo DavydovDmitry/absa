@@ -35,7 +35,7 @@ def split_text(text: str, line_length=300) -> List[str]:
     text_chunk = []
     for token in text.split(' '):
         if len(token) + sum([len(t) for t in text_chunk]) - 1 >= line_length:
-            divided_text.append(' '.join(text_chunk))
+            divided_text.append(' '.join(text_chunk) + ' ')
             text_chunk = [
                 token,
             ]
@@ -56,19 +56,21 @@ def node_preprocess(node: str) -> str:
 def spell_check(texts: List[Text]) -> List[Text]:
     """Return reviews with correct spelling.
 
+    Change as text as start and stop indexes of terms in opinion.
+
     Using yandex Speller API. By the way yandex has a limit for requests params
     take a look: https://yandex.ru/dev/speller/doc/dg/concepts/api-overview-docpage/
 
     WARNING: limit for sentence is unstable.
     Also there is no guarantee that request will processed.
     """
+
     url = 'https://speller.yandex.net/services/spellservice.json/checkText'
 
     logging.info('Start spell checking...')
     with tqdm(total=len(texts), ncols=PROGRESSBAR_COLUMNS_NUM,
               file=sys.stdout) as progress_bar:
         for text in texts:
-            text_parts = list()
             text_shift = 0
             for text_part in split_text(text.get_text()):
 
@@ -92,11 +94,13 @@ def spell_check(texts: List[Text]) -> List[Text]:
                         corrections = []
                         for correction in json.loads(res.content.decode('utf-8')):
                             corrections.append(
-                                Correction(start_index=correction['pos'],
-                                           stop_index=correction['pos'] + correction['len'],
+                                Correction(start_index=correction['pos'] + text_shift,
+                                           stop_index=correction['pos'] + correction['len'] +
+                                           text_shift,
                                            correct=correction['s'][0]))
                         if corrections:
-                            text.correct(corrections=corrections)
+                            text_shift += len(text_part) + text.correct(
+                                corrections=corrections)
 
             progress_bar.update(1)
     logging.info('Spell checking is complete.')
