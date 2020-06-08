@@ -3,7 +3,7 @@ from typing import List
 from .sentence import ParsedSentence
 
 
-class ParsedReview:
+class ParsedText:
     def __init__(self, sentences: List[ParsedSentence]):
         self.sentences = sentences
 

@@ -11,9 +11,9 @@ from sklearn.metrics import f1_score
 from tqdm import tqdm
 
 from absa import opinion_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
-from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.text import ParsedText
 from absa.text.parsed.sentence import ParsedSentence
-from absa.text.opinion.opinion import Opinion
+from absa.text.parsed.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
@@ -53,7 +53,7 @@ class AspectClassifier:
                 break
 
     def fit(self,
-            train_texts: List[ParsedReview],
+            train_texts: List[ParsedText],
             val_texts=None,
             optimizer_class=th.optim.Adam,
             optimizer_params=frozendict({
@@ -153,7 +153,7 @@ class AspectClassifier:
             return train_f1_history, val_f1_history
         return train_f1_history
 
-    def predict(self, texts: List[ParsedReview]) -> List[ParsedReview]:
+    def predict(self, texts: List[ParsedText]) -> List[ParsedText]:
         """Predict sentence aspect terms and it's categories.
 
         Expecting to receive sentences with defined sentence level aspect
@@ -231,7 +231,7 @@ class AspectClassifier:
             aspect_term = [words_indexes[0]]
             aspect_label_index = labels_indexes[aspect_term[0]]
 
-            for word_index in words_indexes:
+            for word_index in words_indexes[1:]:
                 label_index = labels_indexes[word_index]
                 if (word_index - aspect_term[-1] == 1) and (label_index == aspect_label_index):
                     aspect_term.append(word_index)
@@ -266,7 +266,7 @@ class AspectClassifier:
         return classifier
 
     @staticmethod
-    def score(texts: List[ParsedReview], texts_pred: List[ParsedReview]) -> Score:
+    def score(texts: List[ParsedText], texts_pred: List[ParsedText]) -> Score:
         total_targets = 0
         total_predictions = 0
         correct_predictions = 0

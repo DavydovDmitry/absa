@@ -12,9 +12,9 @@ from frozendict import frozendict
 from tqdm import tqdm
 
 from absa import SCORE_DECIMAL_LEN, opinion_polarity_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.text import ParsedText
 from absa.text.parsed.sentence import ParsedSentence
-from absa.text.opinion.opinion import Polarity
+from absa.text.opinion.meta_opinion import Polarity
 from .loader import DataLoader, Batch
 from .nn.nn import NeurelNetwork
 
@@ -62,7 +62,7 @@ class PolarityClassifier:
         return logits, loss, acc
 
     def fit(self,
-            train_texts: List[ParsedReview],
+            train_texts: List[ParsedText],
             val_texts=None,
             optimizer_class=th.optim.Adamax,
             optimizer_params=frozendict({
@@ -155,12 +155,12 @@ class PolarityClassifier:
             return train_acc_history, val_acc_history
         return train_acc_history
 
-    def predict(self, texts: List[ParsedReview]) -> List[ParsedReview]:
+    def predict(self, texts: List[ParsedText]) -> List[ParsedText]:
         """Modify passed sentences. Define every target polarity.
 
         Parameters
         ----------
-        texts : List[ParsedReview]
+        texts : List[ParsedText]
             Sentences with extracted targets.
 
         Return
@@ -206,7 +206,7 @@ class PolarityClassifier:
         return classifier
 
     @staticmethod
-    def score(texts: List[ParsedReview], texts_pred: List[ParsedReview]) -> float:
+    def score(texts: List[ParsedText], texts_pred: List[ParsedText]) -> float:
         """Accuracy of predictions
 
         Returns
@@ -220,8 +220,8 @@ class PolarityClassifier:
         for t_index, (t, t_pred) in enumerate(zip(texts, texts_pred)):
             for s_index, (s, s_pred) in enumerate(zip(t, t_pred)):
                 if (len(s.opinions) != len(s_pred.opinions)) or \
-                   (len(set(hash(t) for t in s.opinions) &
-                        set(hash(t) for t in s_pred.opinions)) != len(s.opinions)):
+                   (set(hash(t) for t in s.opinions) != set(hash(t) for t in s_pred.opinions)):
+                    logging.error(f'{s.get_text()}')
                     logging.error(len(set(s.opinions).intersection(set(s_pred.opinions))))
                     logging.error('-' * 50 + ' Original  targets ' + '-' * 50)
                     for l_target in s.opinions:

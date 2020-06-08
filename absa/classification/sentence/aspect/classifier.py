@@ -9,8 +9,8 @@ from scipy.optimize import minimize as minimize
 from tqdm import tqdm
 
 from absa import sentence_aspect_classifier_dump_path, PROGRESSBAR_COLUMNS_NUM
-from absa.text.parsed.review import ParsedReview
-from absa.text.opinion.opinion import Opinion
+from absa.text.parsed.text import ParsedText
+from absa.text.parsed.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
@@ -59,8 +59,8 @@ class AspectClassifier:
             self.threshold = np.random.random(len(self.aspect_labels)) - 1.0
 
     def fit(self,
-            train_texts: List[ParsedReview],
-            val_texts: List[ParsedReview] = None,
+            train_texts: List[ParsedText],
+            val_texts: List[ParsedText] = None,
             optimizer_class=th.optim.Adam,
             optimizer_params: Dict = frozendict({
                 'lr': 0.01,
@@ -190,12 +190,12 @@ class AspectClassifier:
         f1 = 2 * (precision * recall) / (precision + recall)
         return f1
 
-    def predict(self, texts: List[ParsedReview]) -> List[ParsedReview]:
+    def predict(self, texts: List[ParsedText]) -> List[ParsedText]:
         """Modify passed sentences. Add targets with empty list of nodes.
 
         Parameters
         ----------
-        texts : List[ParsedReview]
+        texts : List[ParsedText]
             Sentences with extracted targets.
 
         Return
@@ -255,7 +255,7 @@ class AspectClassifier:
         return classifier
 
     @staticmethod
-    def score(texts: List[ParsedReview], texts_pred: List[ParsedReview]) -> Score:
+    def score(texts: List[ParsedText], texts_pred: List[ParsedText]) -> Score:
         """Macro classification metrics.
 
         Parameters

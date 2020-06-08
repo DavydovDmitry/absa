@@ -5,7 +5,7 @@ import torch as th
 import dgl
 
 from absa import UNKNOWN_WORD, PAD_WORD
-from absa.text.parsed.review import ParsedReview
+from absa.text.parsed.text import ParsedText
 from absa.text.parsed.sentence import ParsedSentence
 
 Batch = namedtuple(
@@ -39,7 +39,7 @@ class DataLoader:
     """
     def __init__(self,
                  vocabulary: Dict[str, int],
-                 texts: List[ParsedReview],
+                 texts: List[ParsedText],
                  batch_size: int,
                  device: th.device,
                  unknown_word=UNKNOWN_WORD,
@@ -54,7 +54,7 @@ class DataLoader:
         data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
-    def process(self, texts: List[ParsedReview]) -> List[Batch]:
+    def process(self, texts: List[ParsedText]) -> List[Batch]:
         """Process all texts
 
         Parameters

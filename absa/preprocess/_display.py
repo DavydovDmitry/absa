@@ -17,7 +17,7 @@ from typing_extensions import TypedDict
 
 from absa import labeled_reviews_dump_path
 from absa import EXTENDED_POLARITIES
-from absa.text.raw.review import Review
+from absa.text.raw.text import Text
 from absa.text.parsed.sentence import ParsedSentence
 
 NODE_SIZE = 500
@@ -49,13 +49,13 @@ class TreeViewer:
      ----------
      parsed_reviews: List[List[ParsedSentence]]
         Essential parameter, exactly `parsed_reviews` keep polarity marks.
-     reviews: List[Review]
+     reviews: List[Text]
         This parameter is using only for printing sentence text in the
         head of plot.
      """
     def __init__(self,
                  parsed_reviews: List[List[ParsedSentence]],
-                 reviews: List[Review],
+                 reviews: List[Text],
                  ax,
                  title_ax,
                  fig,
@@ -286,7 +286,7 @@ def load_labeled_reviews(file_pathway) -> LabeledReviewsDump:
     return dump
 
 
-def view_dep_tree(reviews: List[Review],
+def view_dep_tree(reviews: List[Text],
                   parsed_reviews: List[List[ParsedSentence]],
                   review_index=0,
                   sentence_index=0):
