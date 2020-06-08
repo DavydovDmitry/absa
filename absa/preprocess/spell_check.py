@@ -99,8 +99,8 @@ def spell_check(texts: List[Text]) -> List[Text]:
                                            text_shift,
                                            correct=correction['s'][0]))
                         if corrections:
-                            text_shift += len(text_part) + text.correct(
-                                corrections=corrections)
+                            text_shift += text.correct(corrections=corrections)
+                text_shift += len(text_part)
 
             progress_bar.update(1)
     logging.info('Spell checking is complete.')

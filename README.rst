@@ -55,6 +55,12 @@ in `absa/__init__.py <https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/_
     wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1RZUyBrWQ0OwlIsmN0axewKg21koYmgQf' -O ./datasets/SemEval2016/train.xml &&
     wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1JR3gblfNXQHApmDzY4FCCjv_0wVug7dO' -O ./datasets/SemEval2016/test.xml
 
+------
+Execution
+------
+
+| Run `train.py` for training classifiers
+| Put your text file to input directory and run `process.py`
 
 ------
 Essential stages

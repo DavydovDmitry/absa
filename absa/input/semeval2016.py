@@ -42,8 +42,8 @@ def from_xml(pathway: str) -> List[Text]:
                                     polarity=polarity))
 
                 sentences.append(text)
-                text_len += len(text)
-            reviews.append(Text(text=''.join(sentences), opinions=opinions))
+                text_len += len(text) + 1
+            reviews.append(Text(text=' '.join(sentences), opinions=opinions))
             progress_bar.update(1)
 
     logging.info('Reviews parsing is complete.')

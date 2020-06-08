@@ -231,7 +231,7 @@ class AspectClassifier:
             aspect_term = [words_indexes[0]]
             aspect_label_index = labels_indexes[aspect_term[0]]
 
-            for word_index in words_indexes:
+            for word_index in words_indexes[1:]:
                 label_index = labels_indexes[word_index]
                 if (word_index - aspect_term[-1] == 1) and (label_index == aspect_label_index):
                     aspect_term.append(word_index)

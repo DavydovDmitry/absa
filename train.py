@@ -4,20 +4,28 @@ To run full pipeline execute run_pipeline.py
 """
 
 import logging
-from typing import List
+from typing import List, Dict
 import datetime
 import os
 import copy
 
-from absa import TEST_APPENDIX, log_path
-from absa import parsed_reviews_dump_path
+import numpy as np
+import torch as th
+
+from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
+    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, log_path
+from absa.text.parsed.text import ParsedText
+from absa.utils.nlp import NLPPipeline
+from absa.utils.dump import make_dump, load_dump
 from absa.utils.embedding import Embeddings
-from absa.utils.dump import load_dump
-from absa.preprocess.pipeline import preprocess_pipeline
+from absa.input.semeval2016 import from_xml
+from absa.preprocess.spell_check import spell_check
+from absa.preprocess.dependency import dep_parse_reviews
 from absa.classification.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
 from absa.classification.opinion.aspect.classifier import AspectClassifier as OpinionAspectClassifier
 from absa.classification.opinion.polarity.classifier import PolarityClassifier
-from absa.text.parsed.text import ParsedText
+
+SEED = 42
 
 
 def configure_logging():
@@ -42,9 +50,55 @@ def configure_logging():
     root_logger.addHandler(file_handler)
 
 
+def preprocess_pipeline(vocabulary: Dict = None,
+                        is_train: bool = True,
+                        skip_spell_check: bool = True,
+                        make_dumps: bool = True) -> List[ParsedText]:
+
+    # Set postfix for train/test data
+    if is_train:
+        appendix = ''
+        reviews_path = train_reviews_path
+    else:
+        appendix = TEST_APPENDIX
+        reviews_path = test_reviews_path
+
+    # Parse reviews
+    if os.path.isfile(raw_reviews_dump_path + appendix):
+        reviews = load_dump(pathway=raw_reviews_dump_path + appendix)
+    else:
+        if vocabulary is None:
+            raise ValueError(
+                "There's no dump. Need to parse review. Therefore vocabulary parameter is required."
+            )
+        reviews = from_xml(pathway=reviews_path)
+        if make_dumps:
+            make_dump(obj=reviews, pathway=raw_reviews_dump_path + appendix)
+
+    # Spellcheck
+    if not skip_spell_check:
+        if os.path.isfile(checked_reviews_dump_path + appendix):
+            reviews = load_dump(pathway=checked_reviews_dump_path + appendix)
+        else:
+            reviews = spell_check(reviews)
+            if make_dumps:
+                make_dump(obj=reviews, pathway=checked_reviews_dump_path + appendix)
+
+    # Dependency parsing
+    if os.path.isfile(parsed_reviews_dump_path + appendix):
+        parsed_reviews = load_dump(pathway=parsed_reviews_dump_path + appendix)
+    else:
+        nlp = NLPPipeline.nlp
+        parsed_reviews = dep_parse_reviews(reviews, nlp)
+        if make_dumps:
+            make_dump(obj=parsed_reviews, pathway=parsed_reviews_dump_path + appendix)
+
+    return parsed_reviews
+
+
 def sentence_aspect_classification(train_reviews: List[ParsedText],
                                    test_reviews: List[ParsedText]) -> List[ParsedText]:
-    if False:
+    if True:
         classifier = SentenceAspectClassifier.load_model()
     else:
         classifier = SentenceAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
@@ -63,7 +117,7 @@ def sentence_aspect_classification(train_reviews: List[ParsedText],
 def opinion_aspect_classification(train_reviews: List[ParsedText],
                                   test_reviews: List[ParsedText],
                                   test_reviews_pred: List[ParsedText]) -> List[ParsedText]:
-    if False:
+    if True:
         classifier = OpinionAspectClassifier.load_model()
     else:
         classifier = OpinionAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
@@ -77,7 +131,7 @@ def opinion_aspect_classification(train_reviews: List[ParsedText],
 
 def opinion_polarity_classification(train_reviews: List[ParsedText],
                                     test_reviews: List[ParsedText]) -> List[ParsedText]:
-    if False:
+    if True:
         classifier = PolarityClassifier.load_model()
     else:
         classifier = PolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)

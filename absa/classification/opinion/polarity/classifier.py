@@ -220,8 +220,7 @@ class PolarityClassifier:
         for t_index, (t, t_pred) in enumerate(zip(texts, texts_pred)):
             for s_index, (s, s_pred) in enumerate(zip(t, t_pred)):
                 if (len(s.opinions) != len(s_pred.opinions)) or \
-                   (len(set(hash(t) for t in s.opinions) &
-                        set(hash(t) for t in s_pred.opinions)) != len(s.opinions)):
+                   (set(hash(t) for t in s.opinions) != set(hash(t) for t in s_pred.opinions)):
                     logging.error(f'{s.get_text()}')
                     logging.error(len(set(s.opinions).intersection(set(s_pred.opinions))))
                     logging.error('-' * 50 + ' Original  targets ' + '-' * 50)

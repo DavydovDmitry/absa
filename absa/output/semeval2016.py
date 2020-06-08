@@ -5,10 +5,10 @@ from xml.dom import minidom
 import os
 
 from absa import output_path
-from ..text.raw.text import Text
+from ..text.parsed.text import ParsedText
 
 
-def to_xml(texts: List[Text], output_filename='parsed') -> None:
+def to_xml(texts: List[ParsedText], output_filename='parsed.xml') -> None:
     output_file = os.path.join(output_path, output_filename)
 
     top = Element('Reviews')
@@ -16,18 +16,19 @@ def to_xml(texts: List[Text], output_filename='parsed') -> None:
         review_xml = SubElement(top, 'Review')
         for sentence in text.sentences:
             sentence_xml = SubElement(review_xml, 'Sentence')
-            sentence_xml.text = sentence.text
+            sentence_xml.text = sentence.get_text()
             if sentence.opinions:
                 opinions_xml = SubElement(sentence_xml, 'Opinions')
                 for opinion in sentence.opinions:
-                    opinion_xml = SubElement(
+                    target = []
+                    for node in opinion.nodes:
+                        start, stop = sentence.id2word[node]
+                        target.append(sentence.get_text()[start:stop])
+                    SubElement(
                         opinions_xml, 'Opinion', {
-                            'target':
-                            ' '.join(map(lambda index: sentence.text[index], opinion.nodes)),
-                            'category':
-                            opinion.category,
-                            'polarity':
-                            opinion.polarity
+                            'target': ' '.join(target),
+                            'category': opinion.category,
+                            'polarity': opinion.polarity.name
                         })
     rough_string = ElementTree.tostring(top, 'utf-8')
     reparsed = minidom.parseString(rough_string)
