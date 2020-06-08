@@ -1,4 +1,4 @@
-from ..opinion.opinion import MetaOpinion
+from ..opinion.meta_opinion import MetaOpinion
 
 
 class Opinion(MetaOpinion):

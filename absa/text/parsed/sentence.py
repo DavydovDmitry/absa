@@ -2,9 +2,8 @@ from typing import List, Dict
 
 import networkx as nx
 
-from ..raw.sentence import Sentence
-from ..opinion.opinion import Opinion
 from ..opinion.mixin import OpinionMixin
+from .opinion import Opinion
 
 
 class ParsedSentence(OpinionMixin):
@@ -81,45 +80,47 @@ class ParsedSentence(OpinionMixin):
                     return False
         return True
 
-    def to_sentence(self) -> Sentence:
-        """Convert to instance of Sentence class
+    # todo
+    # def to_sentence(self) -> Sentence:
+    #     """Convert to instance of Sentence class
+    #
+    #     Returns
+    #     -------
+    #     sentence : Sentence
+    #     """
+    #
+    #     text = []
+    #     for parsed_node_id, _ in sorted(self.id2init_id.items(), key=lambda item: item[1]):
+    #         if parsed_node_id in self.id2word:
+    #             text.append(self.id2word[parsed_node_id])
+    #
+    #     opinions = []
+    #     for opinion in self.opinions:
+    #         opinions.append(
+    #             Opinion(nodes=[
+    #                 self.id2init_id[parsed_node_id] for parsed_node_id in opinion.nodes
+    #             ],
+    #                     category=opinion.category,
+    #                     polarity=opinion.polarity))
+    #     return Sentence(text=text, opinions=opinions)
 
-        Returns
-        -------
-        sentence : Sentence
-        """
-
-        text = []
-        for parsed_node_id, _ in sorted(self.id2init_id.items(), key=lambda item: item[1]):
-            if parsed_node_id in self.id2word:
-                text.append(self.id2word[parsed_node_id])
-
-        opinions = []
-        for opinion in self.opinions:
-            opinions.append(
-                Opinion(nodes=[
-                    self.id2init_id[parsed_node_id] for parsed_node_id in opinion.nodes
-                ],
-                        category=opinion.category,
-                        polarity=opinion.polarity))
-        return Sentence(text=text, opinions=opinions)
-
-    def to_specified_sentence(self, text: List[str]) -> Sentence:
-        """Convert to instance of Sentence class with specified text
-
-        Returns
-        -------
-        sentence : Sentence
-        """
-
-        opinions = []
-        for opinion in self.opinions:
-            nodes = []
-            for node in opinion.nodes:
-                node = self.id2init_id[node]
-                if node not in nodes:
-                    nodes.append(node)
-            opinions.append(
-                Opinion(nodes=nodes, category=opinion.category, polarity=opinion.polarity))
-
-        return Sentence(text=text, opinions=opinions)
+    # todo
+    # def to_specified_sentence(self, text: List[str]) -> Sentence:
+    #     """Convert to instance of Sentence class with specified text
+    #
+    #     Returns
+    #     -------
+    #     sentence : Sentence
+    #     """
+    #
+    #     opinions = []
+    #     for opinion in self.opinions:
+    #         nodes = []
+    #         for node in opinion.nodes:
+    #             node = self.id2init_id[node]
+    #             if node not in nodes:
+    #                 nodes.append(node)
+    #         opinions.append(
+    #             Opinion(nodes=nodes, category=opinion.category, polarity=opinion.polarity))
+    #
+    #     return Sentence(text=text, opinions=opinions)

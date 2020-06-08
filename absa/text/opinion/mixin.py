@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Any, Type
 
-from .opinion import Opinion
+from .meta_opinion import MetaOpinion
 
 
 class OpinionMixin:
-    def __init__(self, opinions: List[Opinion]):
+    def __init__(self, opinions: List[MetaOpinion]):
         self.opinions = opinions
 
     def reset_opinions(self):

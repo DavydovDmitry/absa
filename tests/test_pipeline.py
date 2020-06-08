@@ -19,7 +19,7 @@ def test_dep_parsing_basic():
     nlp = NLPPipeline.nlp
     reviews = load_dump(pathway=os.path.join(test_dumps_path, SemEval2016_filename +
                                              RAW_POSTFIX))
-    parsed_reviews = dep_parse_reviews(reviews=reviews, nlp=nlp)
+    parsed_reviews = dep_parse_reviews(texts=reviews, nlp=nlp)
     make_dump(obj=parsed_reviews,
               pathway=os.path.join(test_dumps_path, SemEval2016_filename + DEP_POSTFIX))
 

@@ -13,7 +13,7 @@ from tqdm import tqdm
 from absa import opinion_aspect_classifier_dump_path, SCORE_DECIMAL_LEN, PROGRESSBAR_COLUMNS_NUM
 from absa.text.parsed.review import ParsedReview
 from absa.text.parsed.sentence import ParsedSentence
-from absa.text.opinion.opinion import Opinion
+from absa.text.parsed.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader

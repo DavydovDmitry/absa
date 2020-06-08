@@ -9,14 +9,14 @@ from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
 from absa.text.raw.text import Text
-from absa.text.opinion.opinion import Opinion
+from absa.text.parsed.opinion import Opinion
 from absa.text.parsed.sentence import ParsedSentence
 from absa.text.parsed.review import ParsedReview
 
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def dep_parse_reviews(reviews: List[Text], nlp: stanfordnlp.Pipeline) -> List[ParsedReview]:
+def dep_parse_reviews(texts: List[Text], nlp: stanfordnlp.Pipeline) -> List[ParsedReview]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -36,7 +36,7 @@ def dep_parse_reviews(reviews: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pa
 
     Parameters
     ----------
-    reviews: list[Text]
+    texts: list[Text]
         list of raw reviews
     nlp: stanfordnlp.Pipeline
         pipeline for text processing
@@ -50,11 +50,10 @@ def dep_parse_reviews(reviews: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pa
     logging.info('Start dependency parsing...')
     parsed_reviews = []
 
-    with tqdm(total=len(reviews), ncols=PROGRESSBAR_COLUMNS_NUM,
+    with tqdm(total=len(texts), ncols=PROGRESSBAR_COLUMNS_NUM,
               file=sys.stdout) as progress_bar:
-        for review_index, review in enumerate(reviews):
+        for text_index, text in enumerate(texts):
             parsed_sentences = []
-            for sentence_index, sentence in enumerate(review.sentences):
                 id2word = dict()
                 id2lemma = dict()
                 id2dep = dict()
@@ -62,10 +61,8 @@ def dep_parse_reviews(reviews: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pa
                 targets = list()
                 graph = nx.classes.DiGraph()
 
-                # parse sentence
-                if len(sentence.text) > 0:
-                    sentence_text = sentence.get_text()
-                    docs = nlp(sentence_text).sentences
+                if len(text.get_text()) > 0:
+                    docs = nlp(text.get_text()).sentences
                     start = 0
                     token_index = 0
                     for doc in docs:

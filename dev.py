@@ -14,7 +14,6 @@ import torch as th
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
     parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, log_path
-from absa.text.raw.text import Text
 from absa.text.parsed.review import ParsedReview
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
@@ -82,10 +81,9 @@ def preprocess_pipeline(vocabulary: Dict = None,
             reviews, spell_checked2init = load_dump(pathway=checked_reviews_dump_path +
                                                     appendix)
         else:
-            reviews, spell_checked2init = spell_check(reviews)
+            reviews = spell_check(reviews)
             if make_dumps:
-                make_dump(obj=(reviews, spell_checked2init),
-                          pathway=checked_reviews_dump_path + appendix)
+                make_dump(obj=reviews, pathway=checked_reviews_dump_path + appendix)
 
     # Dependency parsing
     if os.path.isfile(parsed_reviews_dump_path + appendix):

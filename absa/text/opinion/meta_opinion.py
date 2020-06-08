@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 
 from .polarity import Polarity, DEFAULT_POLARITY
 
