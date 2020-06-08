@@ -2,11 +2,13 @@
 Execution
 ----------
 
-Just execute `run_pipeline.py` to run full pipeline:
+| Execute `train.py` to train classifiers.
+| Put your text file to input directory and run `process.py`.
 
 .. code-block:: bash
 
-    python run_pipeline.py
+    python train.py
+    python process.py
 
 ----------
 Setup
@@ -16,7 +18,7 @@ Setup
 
 - `Python <https://www.python.org/downloads/>`_>=3.7
 - `Poetry <https://python-poetry.org/docs/>`_>=0.12 # or another dependency manager
-- `Torch <https://pytorch.org/get-started/locally/>`_>=1.5
+- `PyTorch <https://pytorch.org/get-started/locally/>`_>=1.5
 
 To install all requisites you can execute script:
 
@@ -55,36 +57,28 @@ in `absa/__init__.py <https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/_
     wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1RZUyBrWQ0OwlIsmN0axewKg21koYmgQf' -O ./datasets/SemEval2016/train.xml &&
     wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1JR3gblfNXQHApmDzY4FCCjv_0wVug7dO' -O ./datasets/SemEval2016/test.xml
 
-------
-Execution
-------
-
-| Run `train.py` for training classifiers
-| Put your text file to input directory and run `process.py`
 
 ------
 Essential stages
 ------
 ::
 
-
+            Upload reviews 
+                  |
+                  V     List[Text]   
                   |
     +-------------------------------------- Preprocess pipeline ---------------+
     |             |                                                            |
     |             V                                                            |
-    |       Upload reviews                                                     |
-    |             |                                                            |
-    |             |     List[Review]                                           |
-    |             V                                                            |
     |         Spell check                                                      |
     |             |                                                            |
-    |             |     List[Review]                                           |
+    |             |     List[Text]                                             |
     |             V                                                            |
     |      Dependency parsing                                                  |
     |             |                                                            |
     +--------------------------------------------------------------------------+
                   |
-                  V     List[ParsedReview]
+                  V     List[ParsedText]
                   |
     +-------------------------------------- ABSA pipeline ---------------------+
     |             |                                                            |
@@ -92,15 +86,15 @@ Essential stages
     |             V                                                            |
     | Sentence Level Aspect Classification                                     |
     |             |                                                            |
-    |             |     List[ParsedReview]                                     |
+    |             |     List[ParsedText]                                       |
     |             V                                                            |
     | Opinion Level Aspect Classification                                      |
     |             |                                                            |
     +--------------------------------------------------------------------------+
-    |             |     List[ParsedReview]                                     |
+    |             |     List[ParsedText]                                       |
     |             V                                                            |
     |   Polarity Classification                                                |
     |             |                                                            |
     +--------------------------------------------------------------------------+
                   |
-                  V     List[ParsedReview]
+                  V     List[ParsedText]
