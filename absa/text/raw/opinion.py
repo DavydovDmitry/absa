@@ -19,12 +19,10 @@ class Opinion(MetaOpinion):
         self.stop_index = stop_index
 
     def __str__(self):
-        # todo
         return f'{self.start_index} {self.category} {self.polarity.name}'
 
     def __hash__(self):
-        # todo
-        return hash(tuple(self.start_index, self.stop_index, self.category))
+        return hash((self.start_index, self.stop_index, self.category))
 
     def __eq__(self, other: 'Opinion'):
         if not isinstance(other, Opinion):
@@ -33,3 +31,8 @@ class Opinion(MetaOpinion):
                (self.stop_index == other.stop_index) & \
                (self.category == other.category) & \
                (self.polarity == other.polarity)
+
+    def is_implicit(self):
+        if self.start_index == self.stop_index:
+            return True
+        return False
