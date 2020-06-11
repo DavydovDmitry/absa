@@ -3,7 +3,6 @@ import json
 import time
 import logging
 import sys
-import re
 
 import requests
 from tqdm import tqdm
@@ -20,9 +19,13 @@ def split_text(text: str, line_length=300) -> List[str]:
     len(str).
 
     Parameters:
+    text : str
+        Text to be splitted
+    line_length : int
+        Max number of bytes for text chunk
 
     Return:
-    todo
+    divided_text : List[str]
     """
     line_length = line_length // 2  # cyrillic letters are expecting
 
@@ -45,14 +48,6 @@ def split_text(text: str, line_length=300) -> List[str]:
     return divided_text
 
 
-def node_preprocess(node: str) -> str:
-    node = node.lower()
-    for symbol in r'?!.-':
-        pattern = r'[' + symbol + r']+'
-        node = re.sub(pattern=pattern, repl=symbol, string=node)
-    return node
-
-
 def spell_check(texts: List[Text]) -> List[Text]:
     """Return reviews with correct spelling.
 
@@ -68,6 +63,10 @@ def spell_check(texts: List[Text]) -> List[Text]:
     url = 'https://speller.yandex.net/services/spellservice.json/checkText'
 
     logging.info('Start spell checking...')
+    # todo: logger file handler
+    logger = logging.getLogger()
+    console_handler = logger.handlers[0]
+    logger.removeHandler(console_handler)
     with tqdm(total=len(texts), ncols=PROGRESSBAR_COLUMNS_NUM,
               file=sys.stdout) as progress_bar:
         for text in texts:
@@ -93,15 +92,22 @@ def spell_check(texts: List[Text]) -> List[Text]:
                     if res.content:
                         corrections = []
                         for correction in json.loads(res.content.decode('utf-8')):
+                            start_index = correction['pos']
+                            stop_index = start_index + correction['len']
+                            correct = correction['s'][0]
+
                             corrections.append(
-                                Correction(start_index=correction['pos'] + text_shift,
-                                           stop_index=correction['pos'] + correction['len'] +
-                                           text_shift,
-                                           correct=correction['s'][0]))
+                                Correction(start_index=start_index + text_shift,
+                                           stop_index=stop_index + text_shift,
+                                           correct=correct))
+                            logging.info(
+                                f'Correction: {text_part[start_index:stop_index]}  -> {correct}'
+                            )
                         if corrections:
                             text_shift += text.correct(corrections=corrections)
                 text_shift += len(text_part)
 
             progress_bar.update(1)
+    logger.addHandler(console_handler)
     logging.info('Spell checking is complete.')
     return texts

@@ -6,6 +6,13 @@ from .polarity import Polarity, DEFAULT_POLARITY
 class MetaOpinion:
     """Opinion representation
 
+    Consist of:
+    - aspect term
+    - aspect category
+    - polarity
+
+    Expecting that aspect term is sequence of consecutive words.
+
     Attributes
     ----------
     category : str

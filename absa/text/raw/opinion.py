@@ -2,16 +2,14 @@ from ..opinion.meta_opinion import MetaOpinion
 
 
 class Opinion(MetaOpinion):
-    """Opinion representation
-
-    todo
+    """Opinion representation for raw texts
 
     Attributes
     ----------
-    category : str
-        Aspect category of target.
-    polarity : Polarity
-        Polarity of target.
+    start_index : int
+        Position of first letter of opinion
+    stop_index : int
+        Position of last letter (-1)
     """
     def __init__(self, start_index: int, stop_index: int, category: str, polarity: str = None):
         super().__init__(category, polarity)
@@ -19,7 +17,9 @@ class Opinion(MetaOpinion):
         self.stop_index = stop_index
 
     def __str__(self):
-        return f'{self.start_index} {self.category} {self.polarity.name}'
+        return f'slice=({self.start_index}, {self.stop_index}), ' + \
+               f'category={self.category}, ' + \
+               f'polarity={self.polarity.name}'
 
     def __hash__(self):
         return hash((self.start_index, self.stop_index, self.category))

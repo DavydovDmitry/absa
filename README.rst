@@ -5,7 +5,7 @@ Setup
 **1) Requirements**
 
 - `Python <https://www.python.org/downloads/>`_>=3.7
-- `Poetry <https://python-poetry.org/docs/>`_>=0.12 # or another dependency manager
+- `Poetry <https://python-poetry.org/docs/>`_>=0.12
 - `PyTorch <https://pytorch.org/get-started/locally/>`_>=1.5
 
 **2) Requisites**
