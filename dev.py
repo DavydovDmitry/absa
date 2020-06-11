@@ -5,7 +5,6 @@ To run full pipeline execute run_pipeline.py
 
 import logging
 from typing import List, Dict
-import datetime
 import os
 import copy
 
@@ -13,8 +12,9 @@ import numpy as np
 import torch as th
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
-    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, log_path
+    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path
 from absa.text.parsed.text import ParsedText
+from absa.utils.logging import configure_logging
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
 from absa.utils.embedding import Embeddings
@@ -26,28 +26,6 @@ from absa.classification.opinion.aspect.classifier import AspectClassifier as Op
 from absa.classification.opinion.polarity.classifier import PolarityClassifier
 
 SEED = 42
-
-
-def configure_logging():
-    """Logging configuration
-
-    Log formatting.
-    Pass logs to terminal and to file.
-    """
-    if not os.path.isdir(log_path):
-        os.mkdir(log_path)
-
-    logging.basicConfig(level=logging.INFO)
-    log_formatter = logging.Formatter(
-        "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-    log_formatter.formatTime = lambda record, datefmt: datetime.datetime.now().strftime(
-        "%Y-%m-%d %H:%M:%S")
-    root_logger = logging.getLogger()
-
-    file_handler = logging.FileHandler(
-        f'{log_path}/{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.log')
-    file_handler.setFormatter(log_formatter)
-    root_logger.addHandler(file_handler)
 
 
 def preprocess_pipeline(vocabulary: Dict = None,
