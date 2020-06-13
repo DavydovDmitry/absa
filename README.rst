@@ -1,3 +1,8 @@
+------
+Essential stages
+------
+
+
 .. image:: analysis/images/pipeline.jpg
     :align: center
 
@@ -62,43 +67,3 @@ Execution
     python train.py
     python process.py
 
-------
-Essential stages
-------
-::
-
-            Upload reviews 
-                  |
-                  V     List[Text]   
-                  |
-    +-------------------------------------- Preprocess pipeline ---------------+
-    |             |                                                            |
-    |             V                                                            |
-    |         Spell check                                                      |
-    |             |                                                            |
-    |             |     List[Text]                                             |
-    |             V                                                            |
-    |      Dependency parsing                                                  |
-    |             |                                                            |
-    +--------------------------------------------------------------------------+
-                  |
-                  V     List[ParsedText]
-                  |
-    +-------------------------------------- ABSA pipeline ---------------------+
-    |             |                                                            |
-    +-------------------------------------- Aspect Classification -------------+
-    |             V                                                            |
-    | Sentence Level Aspect Classification                                     |
-    |             |                                                            |
-    |             |     List[ParsedText]                                       |
-    |             V                                                            |
-    | Opinion Level Aspect Classification                                      |
-    |             |                                                            |
-    +--------------------------------------------------------------------------+
-    |             |     List[ParsedText]                                       |
-    |             V                                                            |
-    |   Polarity Classification                                                |
-    |             |                                                            |
-    +--------------------------------------------------------------------------+
-                  |
-                  V     List[ParsedText]
