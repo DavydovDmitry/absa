@@ -9,7 +9,8 @@ import os
 import copy
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
-    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path
+    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, \
+    SCORE_DECIMAL_LEN
 from absa.text.parsed.text import ParsedText
 from absa.utils.logging import configure_logging
 from absa.utils.nlp import NLPPipeline
@@ -73,11 +74,8 @@ def preprocess_pipeline(vocabulary: Dict = None,
 
 def sentence_aspect_classification(train_reviews: List[ParsedText],
                                    test_reviews: List[ParsedText]) -> List[ParsedText]:
-    if True:
-        classifier = SentenceAspectClassifier.load_model()
-    else:
-        classifier = SentenceAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-        classifier.fit(train_texts=train_reviews)
+    classifier = SentenceAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+    classifier.fit(train_texts=train_reviews)
 
     test_reviews_pred = copy.deepcopy(test_reviews)
     for review in test_reviews_pred:
@@ -92,11 +90,8 @@ def sentence_aspect_classification(train_reviews: List[ParsedText],
 def opinion_aspect_classification(train_reviews: List[ParsedText],
                                   test_reviews: List[ParsedText],
                                   test_reviews_pred: List[ParsedText]) -> List[ParsedText]:
-    if True:
-        classifier = OpinionAspectClassifier.load_model()
-    else:
-        classifier = OpinionAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-        classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
+    classifier = OpinionAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+    classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
 
     test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
@@ -106,11 +101,8 @@ def opinion_aspect_classification(train_reviews: List[ParsedText],
 
 def opinion_polarity_classification(train_reviews: List[ParsedText],
                                     test_reviews: List[ParsedText]) -> List[ParsedText]:
-    if True:
-        classifier = PolarityClassifier.load_model()
-    else:
-        classifier = PolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-        classifier.fit(train_texts=train_reviews, val_texts=test_reviews, num_epoch=20)
+    classifier = PolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
+    classifier.fit(train_texts=train_reviews, val_texts=test_reviews, num_epoch=20)
 
     test_reviews_pred = copy.deepcopy(test_reviews)
     for review in test_reviews_pred:
@@ -119,7 +111,8 @@ def opinion_polarity_classification(train_reviews: List[ParsedText],
 
     test_reviews_pred = classifier.predict(test_reviews_pred)
     logging.info(
-        f'Score: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
+        f'Accuracy: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred):{SCORE_DECIMAL_LEN}f}'
+    )
     return test_reviews_pred
 
 

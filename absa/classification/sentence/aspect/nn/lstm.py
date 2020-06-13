@@ -11,15 +11,15 @@ class LSTMClassifier(nn.Module):
     First one run through sequence elements order. The last one run
     through dependency tree of sentence.
     """
-    def __init__(
-        self,
-        emb_matrix: th.Tensor,
-        device: th.device,
-        rnn_dim: int,
-        bidirectional: bool,
-        rnn_layers=1,
-        input_dropout=0.7,
-    ):
+    def __init__(self,
+                 emb_matrix: th.Tensor,
+                 device: th.device,
+                 rnn_dim: int,
+                 bidirectional: bool,
+                 rnn_layers=1,
+                 input_dropout=0.7,
+                 *args,
+                 **kwargs):
         super(LSTMClassifier, self).__init__()
         self.device = device
 

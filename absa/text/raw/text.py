@@ -49,9 +49,9 @@ class Text:
         self.opinions = []
 
     def display(self) -> None:
-        """Color print of review.
+        """Color print of texts
 
-        todo
+        Set color of words according it's polarity.
         """
         def get_color(polarity: str):
             if polarity == 'positive':
@@ -67,10 +67,12 @@ class Text:
                 for opinion in self.opinions if (opinion.start_index != opinion.stop_index)
         ],
                               key=lambda x: x.start_index):
-            print(colored(text=self.text[start_index:opinion.start_index]), end='')
-            print(colored(text=self.text[opinion.start_index:opinion.stop_index],
-                          color=get_color(opinion.polarity.name),
-                          attrs=['blink']),
-                  end='')
-            start_index = opinion.stop_index
+            # display only first occurrence
+            if opinion.start_index > start_index:
+                print(colored(text=self.text[start_index:opinion.start_index]), end='')
+                print(colored(text=self.text[opinion.start_index:opinion.stop_index],
+                              color=get_color(opinion.polarity.name),
+                              attrs=['blink']),
+                      end='')
+                start_index = opinion.stop_index
         print(colored(text=self.text[start_index:]))
