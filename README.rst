@@ -1,3 +1,6 @@
+.. image:: analysis/images/pipeline.jpg
+  :width: 400
+
 ----------
 Setup
 ----------
