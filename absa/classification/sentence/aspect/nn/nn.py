@@ -12,20 +12,22 @@ class NeuralNetwork(nn.Module):
     - Get encodings for targets.
     - Map encodings to num_classes
     """
-    def __init__(
-        self,
-        emb_matrix: th.Tensor,
-        device: th.device,
-        num_class: int,
-        rnn_dim=40,
-        bidirectional=True,
-    ):
+    def __init__(self,
+                 emb_matrix: th.Tensor,
+                 device: th.device,
+                 num_class: int,
+                 rnn_dim=40,
+                 bidirectional=True,
+                 *args,
+                 **kwargs):
         super().__init__()
         self.device = device
         self.nn = LSTMClassifier(emb_matrix=emb_matrix,
                                  device=self.device,
                                  rnn_dim=rnn_dim,
-                                 bidirectional=bidirectional)
+                                 bidirectional=bidirectional,
+                                 *args,
+                                 **kwargs)
         rnn_dim = rnn_dim * 2 if bidirectional else rnn_dim
         self.linear = nn.Linear(rnn_dim, num_class)
 
