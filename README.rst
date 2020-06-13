@@ -1,4 +1,5 @@
 .. image:: analysis/images/pipeline.jpg
+    :align: center
 
 ----------
 Setup
