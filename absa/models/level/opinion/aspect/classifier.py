@@ -18,7 +18,7 @@ from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
 from .nn.nn import NeuralNetwork
-from ...score.f1 import Score
+from absa.models.score.f1 import Score
 
 
 class AspectClassifier:

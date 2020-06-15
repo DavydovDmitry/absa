@@ -16,12 +16,12 @@ from absa.utils.logging import configure_logging
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
 from absa.utils.embedding import Embeddings
-from absa.input.semeval2016 import from_xml
+from absa.io.input.semeval2016 import from_xml
 from absa.preprocess.spell_check import spell_check
 from absa.preprocess.dependency import dep_parse_reviews
-from absa.classification.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
-from absa.classification.opinion.aspect.classifier import AspectClassifier as OpinionAspectClassifier
-from absa.classification.opinion.polarity.classifier import PolarityClassifier
+from absa.models.level.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
+from absa.models.level.opinion.aspect.classifier import AspectClassifier as OpinionAspectClassifier
+from absa.models.level.opinion.polarity.classifier import PolarityClassifier
 
 SEED = 42
 

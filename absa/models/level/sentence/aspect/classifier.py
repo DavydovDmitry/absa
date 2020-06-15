@@ -15,8 +15,8 @@ from absa.text.parsed.opinion import Opinion
 from absa.labels.labels import Labels
 from absa.labels.default import ASPECT_LABELS
 from .loader import DataLoader
-from .nn.nn import NeuralNetwork
-from ...score.f1 import Score
+from absa.models.level.sentence.aspect.nn import NeuralNetwork
+from absa.models.score.f1 import Score
 
 VERBOSITY_ON, VERBOSITY_PROGRESS, VERBOSITY_OFF = 'verbose', 'progress_bar', 'silence'
 
@@ -370,6 +370,6 @@ class AspectClassifier(BaseEstimator):
         classifier._load_model(aspect_labels=checkpoint['aspect_labels'],
                                vocabulary=checkpoint['vocabulary'],
                                threshold=checkpoint['threshold'],
-                               embeddings=model['nn.embed.weight'])
+                               embeddings=model['embeddings.weight'])
         classifier.model.load_state_dict(model)
         return classifier

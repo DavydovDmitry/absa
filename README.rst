@@ -2,9 +2,9 @@
 Essential stages
 ------
 
+.. raw:: html
 
-.. image:: analysis/images/pipeline.jpg
-    :align: center
+    <object data="analysis/images/pipeline.svg" type="image/svg+xml"></object>
 
 ----------
 Setup
