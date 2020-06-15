@@ -4,7 +4,19 @@ Essential stages
 
 .. raw:: html
 
-    <object data="analysis/images/pipeline.svg" type="image/svg+xml"></object>
+   :file: analysis/images/pipeline.svg
+   
+------
+Essential stages
+------
+
+.. image:: analysis/images/pipeline.jpg
+    :align: center
+    
+    
+.. raw:: html
+
+    :download:`svg <analysis/images/pipeline.svg>`
 
 ----------
 Setup
