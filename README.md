@@ -13,10 +13,16 @@ Essential stages
 .. image:: analysis/images/pipeline.jpg
     :align: center
     
-    
-.. raw:: html
+------
+Essential stages
+------
+ 
+.. raw:: html   
 
-    :download:`svg <analysis/images/pipeline.svg>`
+    <p><a class="no-attachment-icon" href="https://gitlab.com/davydovdmitry/absa/-/blob/dev/analysis/images/pipeline.svg" target="_blank"><img src="https://gitlab.com/davydovdmitry/absa/-/blob/dev/analysis/images/pipeline.svg" alt=""></a></p>
+
+
+![](https://upload.wikimedia.org/wikipedia/commons/0/02/SVG_logo.svg)
 
 ----------
 Setup
