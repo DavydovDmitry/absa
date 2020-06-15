@@ -74,8 +74,8 @@ def preprocess_pipeline(vocabulary: Dict = None,
 
 def sentence_aspect_classification(train_reviews: List[ParsedText],
                                    test_reviews: List[ParsedText]) -> List[ParsedText]:
-    classifier = SentenceAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-    classifier.fit(train_texts=train_reviews)
+    classifier = SentenceAspectClassifier()
+    classifier.fit(train_texts=train_reviews, vocabulary=vocabulary, embeddings=emb_matrix)
 
     test_reviews_pred = copy.deepcopy(test_reviews)
     for review in test_reviews_pred:

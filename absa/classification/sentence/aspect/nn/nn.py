@@ -1,3 +1,4 @@
+import numpy as np
 import torch as th
 import torch.nn as nn
 
@@ -5,40 +6,38 @@ from .lstm import LSTMClassifier
 
 
 class NeuralNetwork(nn.Module):
-    """Targets polarity classifier
-
-    Essential stages:
-    - Encode sequence elements with neural networks.
-    - Get encodings for targets.
-    - Map encodings to num_classes
-    """
     def __init__(self,
-                 emb_matrix: th.Tensor,
                  device: th.device,
-                 num_class: int,
-                 rnn_dim=40,
+                 embeddings: th.Tensor,
+                 num_classes: int,
+                 layers_dim: np.array,
                  bidirectional=True,
                  *args,
                  **kwargs):
         super().__init__()
         self.device = device
-        self.nn = LSTMClassifier(emb_matrix=emb_matrix,
+        self.nn = LSTMClassifier(embeddings=embeddings,
                                  device=self.device,
-                                 rnn_dim=rnn_dim,
                                  bidirectional=bidirectional,
+                                 layers_dim=layers_dim,
                                  *args,
                                  **kwargs)
-        rnn_dim = rnn_dim * 2 if bidirectional else rnn_dim
-        self.linear = nn.Linear(rnn_dim, num_class)
+        self.linear = nn.Linear(layers_dim[-1] * 2 if bidirectional else layers_dim[-1],
+                                num_classes)
 
     def forward(self, embed_ids: th.Tensor, sentence_len: th.Tensor) -> th.Tensor:
-        """Forward step.
+        """Forward step
 
-        Return
+        Parameters
+        ----------
+        embed_ids : th.Tensor
+        sentence_len: th.Tensor
+
+        Returns
         -------
-        logits : th.Tensor(device=self.device)
-            For every class
+        logits : th.Tensor
         """
+
         h = self.nn(embed_ids=embed_ids, sentence_len=sentence_len)
         logits = self.linear(h)
         return logits
