@@ -35,9 +35,9 @@ rm embeddings/185.zip embeddings/README
 ```
 
 
-Take a look at `RusVectōrēs <https://rusvectores.org/ru/models/>`_ for
+Take a look at [RusVectōrēs](https://rusvectores.org/ru/models/) for
 another pretrained embeddings. In this case don't forget to replace filename
-in `absa/__init__.py <https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/__init__.py>`_
+in [absa/\_\_init__.py](https://gitlab.com/davydovdmitry/absa/-/blob/master/absa/__init__.py)
 
 
 * Download dataset
