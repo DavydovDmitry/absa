@@ -26,9 +26,8 @@ class AspectClassifier(BaseEstimator):
     def __init__(
             self,
             batch_size: int = 100,
-            nn_params: Dict = frozendict({
-                'layers_dim': np.array([40]),
-            }),
+            layers_dim: np.array = np.array([40]),
+            emb_dropout: float = 0.7,
             optimizer_class=th.optim.Adam,
             optimizer_params: Dict = frozendict({
                 'lr': 0.01,
@@ -44,7 +43,8 @@ class AspectClassifier(BaseEstimator):
         self.optimizer_class = optimizer_class
         self.optimizer_params = optimizer_params
         self.num_epoch = num_epoch
-        self.nn_params = nn_params
+        self.layers_dim = layers_dim
+        self.emb_dropout = emb_dropout
 
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
@@ -67,14 +67,15 @@ class AspectClassifier(BaseEstimator):
 
         self.vocabulary = vocabulary
         self.aspect_labels = aspect_labels
-        self.threshold = threshold
+        self.threshold_ = threshold
 
         while True:
             try:
                 self.model = NeuralNetwork(embeddings=embeddings,
                                            num_classes=len(self.aspect_labels),
                                            device=self.device,
-                                           **self.nn_params).to(self.device)
+                                           layers_dim=self.layers_dim,
+                                           emb_dropout=self.emb_dropout).to(self.device)
             except RuntimeError as e:
                 if 'out of memory' in str(e):
                     th.cuda.empty_cache()
@@ -87,7 +88,7 @@ class AspectClassifier(BaseEstimator):
         vocabulary: Dict[str, int],
         embeddings: th.Tensor,
         val_texts: List[ParsedText] = None,
-        init_threshold: np.array = None,
+        start_threshold: np.array = None,
         fixed_threshold: bool = False,
         save_state: bool = True,
         verbose: Union[VERBOSITY_ON, VERBOSITY_PROGRESS, VERBOSITY_OFF] = VERBOSITY_PROGRESS
@@ -113,7 +114,7 @@ class AspectClassifier(BaseEstimator):
         embeddings : th.Tensor
             matrix of pretrained embeddings
 
-        init_threshold : np.array
+        start_threshold : np.array
             start value of threshold
         fixed_threshold : bool
             optimize threshold during training or set it immutable
@@ -124,12 +125,12 @@ class AspectClassifier(BaseEstimator):
         """
 
         aspect_labels = Labels(ASPECT_LABELS)
-        if init_threshold is None:
-            init_threshold = np.random.random(len(aspect_labels)) - 1.0
+        if start_threshold is None:
+            start_threshold = np.random.random(len(aspect_labels)) - 1.0
         self._load_model(vocabulary=vocabulary,
                          embeddings=embeddings,
                          aspect_labels=aspect_labels,
-                         threshold=init_threshold)
+                         threshold=start_threshold)
 
         loss_criterion = th.nn.BCEWithLogitsLoss()
         loss_func = lambda y_pred, y: loss_criterion(y_pred, y)
@@ -169,15 +170,15 @@ class AspectClassifier(BaseEstimator):
             train_logits = np.concatenate(train_logits)
             train_labels = np.concatenate(train_labels)
             if not fixed_threshold:
-                opt_results = minimize(lambda threshold: -self.f1_score(
+                opt_results = minimize(lambda threshold: -self._opt_score(
                     logits=train_logits, labels=train_labels, threshold=threshold),
-                                       x0=self.threshold)
-                self.threshold = opt_results.x
+                                       x0=self.threshold_)
+                self.threshold_ = opt_results.x
                 f1_score = -opt_results.fun
             else:
-                f1_score = self.f1_score(logits=train_logits,
-                                         labels=train_labels,
-                                         threshold=self.threshold)
+                f1_score = self._opt_score(logits=train_logits,
+                                           labels=train_labels,
+                                           threshold=self.threshold_)
             train_f1_history[epoch] = f1_score
 
             # Validation
@@ -191,9 +192,9 @@ class AspectClassifier(BaseEstimator):
                     val_labels.append(batch.labels.to('cpu').data.numpy())
                 val_logits = np.concatenate(val_logits)
                 val_labels = np.concatenate(val_labels)
-                val_f1_history[epoch] = self.f1_score(logits=val_logits,
-                                                      labels=val_labels,
-                                                      threshold=self.threshold)
+                val_f1_history[epoch] = self._opt_score(logits=val_logits,
+                                                        labels=val_labels,
+                                                        threshold=self.threshold_)
                 if verbose == VERBOSITY_ON:
                     pass
                     # todo: logging
@@ -216,34 +217,15 @@ class AspectClassifier(BaseEstimator):
             return train_f1_history, val_f1_history
         return train_f1_history
 
-    @staticmethod
-    def f1_score(logits: np.array, labels: np.array, threshold: np.array) -> float:
-        """Calculate f1 score from nn output.
-
-        Parameters
-        ----------
-        logits : np.array
-            neural network predictions for every aspect.
-        labels : np.array
-            array of {0, 1} where:
-        1 - aspect present in sentence, 0 - otherwise.
-        threshold : np.array
-            threshold for aspect selection.
-
-        Returns
-        -------
-        f1_score : float
-            macro f1 score
-        """
-        labels_pred = np.where(logits > threshold, 1, 0)
-        correct = labels[labels_pred.nonzero()].sum()
-        total_predictions = labels_pred.sum()
-        total_labels = labels.sum()
-
-        precision = correct / total_predictions
-        recall = correct / total_labels
-        f1 = 2 * (precision * recall) / (precision + recall)
-        return f1
+    def _logits2opinions(self, labels_indexes: np.array) -> List[List[Opinion]]:
+        opinions = []
+        for sentence_labels in labels_indexes:
+            sentence_opinions = []
+            labels = [x[0] for x in np.argwhere(sentence_labels > self.threshold_)]
+            for label in labels:
+                sentence_opinions.append(Opinion(nodes=[], category=self.aspect_labels[label]))
+            opinions.append(sentence_opinions)
+        return opinions
 
     def predict(self, texts: List[ParsedText]) -> List[ParsedText]:
         """Modify passed sentences. Add targets with empty list of nodes.
@@ -258,16 +240,6 @@ class AspectClassifier(BaseEstimator):
         texts : List[ParsedReview]
             Sentences with defined targets.
         """
-        def _get_opinions(labels_indexes: np.array) -> List[List[Opinion]]:
-            opinions = []
-            for sentence_labels in labels_indexes:
-                sentence_opinions = []
-                labels = [x[0] for x in np.argwhere(sentence_labels > self.threshold)]
-                for label in labels:
-                    sentence_opinions.append(
-                        Opinion(nodes=[], category=self.aspect_labels[label]))
-                opinions.append(sentence_opinions)
-            return opinions
 
         self.model.eval()
         texts = copy.deepcopy(texts)
@@ -281,7 +253,7 @@ class AspectClassifier(BaseEstimator):
                              device=self.device)
         for batch_index, batch in enumerate(batches):
             logits = self.model(embed_ids=batch.embed_ids, sentence_len=batch.sentence_len)
-            pred_sentences_targets = _get_opinions(
+            pred_sentences_targets = self._logits2opinions(
                 labels_indexes=logits.to('cpu').data.numpy())
             for internal_index, opinions in enumerate(pred_sentences_targets):
                 text_index = batch.text_index[internal_index]
@@ -289,8 +261,41 @@ class AspectClassifier(BaseEstimator):
                 texts[text_index].sentences[sentence_index].opinions = opinions
         return texts
 
-    def get_scores(self, texts: List[ParsedText]) -> Score:
-        """Macro classification metrics.
+    @staticmethod
+    def _opt_score(logits: np.array, labels: np.array, threshold: np.array) -> float:
+        """Calculate f1 score directly from nn output.
+
+        Parameters
+        ----------
+        logits : np.array
+            neural network predictions for every aspect.
+        labels : np.array
+            array of {0, 1} where:
+            - 1 - aspect present in sentence;
+            - 0 - otherwise.
+        threshold : np.array
+            threshold for aspect selection.
+
+        Returns
+        -------
+        f1_score : float
+            macro f1 score
+        """
+
+        labels_pred = np.where(logits > threshold, 1, 0)
+        correct_predictions = labels[labels_pred.nonzero()].sum()
+        total_predictions = labels_pred.sum()
+        total_labels = labels.sum()
+
+        if (correct_predictions == 0) or (total_predictions == 0):
+            return 0.0
+        precision = correct_predictions / total_predictions
+        recall = correct_predictions / total_labels
+        f1 = 2 * (precision * recall) / (precision + recall)
+        return f1
+
+    def metrics(self, texts: List[ParsedText]) -> Score:
+        """Make predictions and return metrics
 
         Parameters
         ----------
@@ -318,7 +323,7 @@ class AspectClassifier(BaseEstimator):
 
         if total_predictions == 0:
             return Score(precision=1.0, recall=0.0, f1=0.0)
-        if correct_predictions == 0:
+        elif correct_predictions == 0:
             return Score(precision=0.0, recall=0.0, f1=0.0)
         precision = correct_predictions / total_predictions
         recall = correct_predictions / total_labels
@@ -326,9 +331,21 @@ class AspectClassifier(BaseEstimator):
         return Score(precision=precision, recall=recall, f1=f1)
 
     def score(self, X: List[ParsedText]) -> float:
-        return self.get_scores(X).f1
+        """Make predictions and return f1 metric
 
-    def save_model(self, pathway: str = sentence_aspect_classifier_dump_path) -> None:
+        Parameters
+        ----------
+        X : List[ParsedText]
+            text to be classified
+
+        Returns
+        -------
+        f1_score : float
+            macro f1 metric
+        """
+        return self.metrics(X).f1
+
+    def save_model(self, pathway=sentence_aspect_classifier_dump_path) -> None:
         """Save model state
 
         Model state:
@@ -337,7 +354,7 @@ class AspectClassifier(BaseEstimator):
 
         Parameters
         ----------
-        pathway : str
+        pathway
             pathway where classifier will be saved
         """
         th.save(
@@ -345,17 +362,17 @@ class AspectClassifier(BaseEstimator):
                 'params': self.get_params(),
                 'aspect_labels': self.aspect_labels,
                 'vocabulary': self.vocabulary,
-                'threshold': self.threshold,
+                'threshold': self.threshold_,
                 'model': self.model.state_dict(),
             }, pathway)
 
     @staticmethod
-    def load_model(pathway: str = sentence_aspect_classifier_dump_path) -> 'AspectClassifier':
+    def load_model(pathway=sentence_aspect_classifier_dump_path) -> 'AspectClassifier':
         """Get model state
 
         Parameters
         ----------
-        pathway : str
+        pathway
             pathway where classifier was saved
 
         Returns

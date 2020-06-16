@@ -7,20 +7,36 @@ from absa.models.nn.lstm import StackLSTM
 
 class NeuralNetwork(nn.Module):
     def __init__(self,
-                 device: th.device,
                  embeddings: th.Tensor,
                  num_classes: int,
                  layers_dim: np.array,
-                 bidirectional=True,
-                 input_dropout=0.7,
+                 emb_dropout: float,
+                 device: th.device,
+                 bidirectional: bool = True,
                  *args,
                  **kwargs):
+        """
+
+        embeddings : th.Tensor
+            pretrained embeddings
+        num_classes : int
+            number of prediction classes
+        layers_dim: np.array
+            dimensions of LSTM layers
+        device : th.device
+            CPU or GPU
+        bidirectional : bool
+            is all layers bidirectional or not
+        emb_dropout : float
+            probability of dropout layer after embeddings
+        """
+
         super().__init__()
         self.device = device
 
         self.embeddings = nn.Embedding(*embeddings.shape)
         self.embeddings.weight = nn.Parameter(embeddings.to(self.device), requires_grad=False)
-        self.in_drop = nn.Dropout(input_dropout)
+        self.emb_dropout = nn.Dropout(emb_dropout)
 
         self.lstm = StackLSTM(layers_dim=np.concatenate(
             (np.array([self.embeddings.embedding_dim]), layers_dim)),
@@ -43,7 +59,7 @@ class NeuralNetwork(nn.Module):
         """
 
         embeds = self.embeddings(embed_ids)
-        embeds = self.in_drop(embeds)
+        embeds = self.emb_dropout(embeds)
 
         rnn_inputs = nn.utils.rnn.pack_padded_sequence(input=embeds,
                                                        lengths=sentence_len,
