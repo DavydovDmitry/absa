@@ -1,7 +1,9 @@
 """Specify constants, pathways, dumps"""
 
 import os
-from pathlib import Path
+import pathlib
+
+pretrained_embeddings_url = 'http://vectors.nlpl.eu/repository/20/185.zip'
 
 # ------------------------------- Constants -----------------------------------
 SCORE_DECIMAL_LEN = 5
@@ -12,7 +14,8 @@ UNKNOWN_WORD = '<unk>'  # index of word that not found in vocabulary
 PAD_WORD = '<pad>'  # index of that word will be using to pad sentence to maximal length in batch
 
 # ------------------------------- Pathways ------------------------------------
-project_path = str(Path.home())
+# todo: fix
+project_path = pathlib.Path(__file__).resolve().parent
 
 io_path = os.path.join(project_path, 'io')
 input_path = os.path.join(io_path, 'input')
@@ -21,37 +24,36 @@ output_path = os.path.join(io_path, 'output')
 images_path = os.path.join(project_path, 'analysis', 'images')
 
 # ----------------------------- Static ----------------------------------------
-static_files_path = os.path.dirname('~')
+static_files_path = pathlib.Path.home().joinpath('.absa')
 
-competition_path = os.path.join(static_files_path, 'datasets/SemEval2016')
+competition_path = static_files_path.joinpath('datasets/SemEval2016')
 
 TEST_APPENDIX = '.test'  # suffix for test dumps
-train_reviews_path = os.path.join(competition_path, 'train.xml')
-test_reviews_path = os.path.join(competition_path, 'test.xml')
+train_reviews_path = competition_path.joinpath('train.xml')
+test_reviews_path = competition_path.joinpath('test.xml')
 
-embeddings_path = os.path.join(static_files_path, 'embeddings')
-word2vec_model_path = os.path.join(embeddings_path, 'tayga_upos_skipgram_300_2_2019',
-                                   'model.bin')
+embeddings_dir = static_files_path.joinpath('embeddings')
+embeddings_path = embeddings_dir.joinpath('model.bin')
 
-log_path = os.path.join(static_files_path, 'logs')
+log_path = static_files_path.joinpath('logs')
 
 # --------------------------------- Dumps -------------------------------------
-dumps_path = os.path.join(static_files_path, 'dumps')
-classifiers_dump_path = os.path.join(dumps_path, 'classifiers')
-data_dump_path = os.path.join(dumps_path, 'data')
+dumps_path = static_files_path.joinpath('dumps')
+classifiers_dump_path = dumps_path.joinpath('classifiers')
+data_dump_path = dumps_path.joinpath('data')
 
-vocabulary_dump = os.path.join(dumps_path, 'vocabulary')
-embed_matrix_path = os.path.join(dumps_path, 'embed_matrix')
+vocabulary_dump = dumps_path.joinpath('vocabulary')
+embed_matrix_path = dumps_path.joinpath('embed_matrix')
 
 # Processed data
-raw_reviews_dump_path = os.path.join(data_dump_path, 'reviews')
-checked_reviews_dump_path = os.path.join(data_dump_path, 'checked_reviews')
-parsed_reviews_dump_path = os.path.join(data_dump_path, 'dep_parsed_sentence')
+raw_reviews_dump_path = data_dump_path.joinpath('reviews')
+checked_reviews_dump_path = data_dump_path.joinpath('checked_reviews')
+parsed_reviews_dump_path = data_dump_path.joinpath('dep_parsed_sentence')
 
 # classifiers
-sentence_aspect_classifier_dump_path = os.path.join(classifiers_dump_path,
-                                                    'sentence_aspect_classifier.pt')
-opinion_aspect_classifier_dump_path = os.path.join(classifiers_dump_path,
-                                                   'opinion_aspect_classifier.pt')
-opinion_polarity_classifier_dump_path = os.path.join(classifiers_dump_path,
-                                                     'opinion_polarity_classifier.pt')
+sentence_aspect_classifier_dump_path = classifiers_dump_path.joinpath(
+    'sentence_aspect_classifier.pt')
+opinion_aspect_classifier_dump_path = classifiers_dump_path.joinpath(
+    'opinion_aspect_classifier.pt')
+opinion_polarity_classifier_dump_path = classifiers_dump_path.joinpath(
+    'opinion_polarity_classifier.pt')
