@@ -3,8 +3,6 @@
 import os
 import pathlib
 
-pretrained_embeddings_url = 'http://vectors.nlpl.eu/repository/20/185.zip'
-
 # ------------------------------- Constants -----------------------------------
 SCORE_DECIMAL_LEN = 5
 PROGRESSBAR_COLUMNS_NUM = 100
@@ -32,6 +30,7 @@ TEST_APPENDIX = '.test'  # suffix for test dumps
 train_reviews_path = competition_path.joinpath('train.xml')
 test_reviews_path = competition_path.joinpath('test.xml')
 
+pretrained_embeddings_url = 'http://vectors.nlpl.eu/repository/20/185.zip'
 embeddings_dir = static_files_path.joinpath('embeddings')
 embeddings_path = embeddings_dir.joinpath('model.bin')
 

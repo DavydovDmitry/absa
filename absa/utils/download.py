@@ -1,10 +1,9 @@
 import urllib
-import os
 import pathlib
 import shutil
 import logging
 import time
-from multiprocessing import Pool
+import multiprocessing
 from math import ceil
 import functools
 import string
@@ -42,7 +41,7 @@ def download_chunk(chunk_index: int,
             shutil.copyfileobj(r.raw, f)
 
 
-def download_file(url: str, file: pathlib.Path, num_chunks: int = 8):
+def download_file(url: str, file: pathlib.Path, num_chunks: int = multiprocessing.cpu_count()):
     """Upload file in parallel by chunks
 
     Parameters
@@ -65,7 +64,7 @@ def download_file(url: str, file: pathlib.Path, num_chunks: int = 8):
     # todo: progress bar for upload
     start_time = time.time()
     logging.info(f'Start upload file: \'{file.name}\'')
-    with Pool(num_chunks) as pool:
+    with multiprocessing.Pool(num_chunks) as pool:
         pool.map(
             functools.partial(download_chunk,
                               url=url,
