@@ -1,5 +1,3 @@
-"""NLP pipeline"""
-
 import sys
 import os
 import warnings

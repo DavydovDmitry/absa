@@ -1,13 +1,13 @@
 import os
-import pickle
 
 from gensim.models import KeyedVectors
 from gensim.test.utils import datapath
 import torch as th
 import numpy as np
 
-from absa import word2vec_model_path, embed_matrix_path, vocabulary_dump,\
+from absa import embeddings_path, embed_matrix_path, vocabulary_dump,\
     UNKNOWN_WORD, PAD_WORD
+from .dump import make_dump, load_dump
 
 
 def _get_embeddings() -> KeyedVectors:
@@ -17,32 +17,29 @@ def _get_embeddings() -> KeyedVectors:
     -------
     word2vec : KeyedVectors
     """
-    word2vec = KeyedVectors.load_word2vec_format(datapath(word2vec_model_path), binary=True)
+    word2vec = KeyedVectors.load_word2vec_format(datapath(embeddings_path), binary=True)
 
     for word in [UNKNOWN_WORD]:
         embed_dim = word2vec.vector_size
         embed = th.empty(embed_dim, 1)
         embed = th.nn.init.xavier_uniform_(embed).numpy().reshape(embed_dim, )
-        word2vec.add(entities=[word], weights=[embed])
+        word2vec.add(entities=[
+            word,
+        ], weights=[
+            embed,
+        ])
 
     for word in [PAD_WORD]:
         embed_dim = word2vec.vector_size
         embed = np.zeros((embed_dim, ))
-        word2vec.add(entities=[word], weights=[embed])
+        word2vec.add(entities=[
+            word,
+        ], weights=[
+            embed,
+        ])
 
     # word2vec.init_sims(replace=True)
     return word2vec
-
-
-def make_dump(obj, pathway):
-    with open(pathway, 'wb') as f:
-        pickle.dump(obj, f)
-
-
-def load_dump(pathway: str):
-    with open(pathway, 'rb') as f:
-        obj = pickle.load(f)
-    return obj
 
 
 class MetaEmbeddings:
