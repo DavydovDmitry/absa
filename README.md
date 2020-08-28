@@ -1,5 +1,5 @@
 # Essential stages
-![](analysis/images/pipeline.svg)
+![](notebooks/images/pipeline.svg)
 
 # Setup
 
