@@ -2,7 +2,7 @@ import urllib
 import zipfile
 import pathlib
 
-from absa import pretrained_embeddings_url, embeddings_dir, train_reviews_path, test_reviews_path
+from absa import pretrained_embeddings_url, embeddings_dir, competition_path
 from absa.utils.download import download_file
 from absa.utils.logging import configure_logging
 
@@ -24,6 +24,9 @@ def upload_embeddings():
 def upload_train_dataset():
     train_url = 'https://drive.google.com/uc?export=download&id=1RZUyBrWQ0OwlIsmN0axewKg21koYmgQf'
     test_url = 'https://drive.google.com/uc?export=download&id=1JR3gblfNXQHApmDzY4FCCjv_0wVug7dO'
+
+    for url, file in zip([train_url, test_url], ['train.xml', 'test.xml']):
+        download_file(url=url, file=competition_path.joinpath(file))
 
 
 if __name__ == '__main__':

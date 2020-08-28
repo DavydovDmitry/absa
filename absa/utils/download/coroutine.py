@@ -63,6 +63,7 @@ async def schedule_download(url: str, file: pathlib.Path, num_chunks: int):
     file.parent.mkdir(parents=True, exist_ok=True)
     meta = urllib.request.urlopen(url).info()
     file_size = int(meta['Content-Length'])
+    num_chunks = min(num_chunks, int(file_size / 10_000))
 
     # check can allocate file size
     with open(file, 'wb') as f:
@@ -82,7 +83,7 @@ async def schedule_download(url: str, file: pathlib.Path, num_chunks: int):
                                for chunk in range(num_chunks)))
 
 
-def download_file(url: str, file: pathlib.Path, num_chunks: int = 50):
+def download_file(url: str, file: pathlib.Path, max_num_chunks: int = 20):
     """Upload file by chunks
 
     Parameters
@@ -91,10 +92,10 @@ def download_file(url: str, file: pathlib.Path, num_chunks: int = 50):
         url of file to upload
     file
         pathway to save downloaded file
-    num_chunks
+    max_num_chunks
     """
 
     logging.info(f'Start download file: \'{file.name}\'...')
     start_time = time.time()
-    asyncio.run(schedule_download(url, file, num_chunks))
+    asyncio.run(schedule_download(url, file, max_num_chunks))
     logging.info(f'Download is completed. Elapsed time: {(time.time() - start_time):.3f}')
