@@ -4,12 +4,20 @@ import logging
 import time
 from math import ceil
 import asyncio
+import sys
 
 import aiohttp
 import aiofiles
+from tqdm import tqdm
+
+from absa import PROGRESSBAR_COLUMNS_NUM
 
 
-async def download_chunk(chunk_index: int, chunk_size: int, url: str, file: pathlib.Path):
+async def download_chunk(chunk_index: int,
+                         chunk_size: int,
+                         url: str,
+                         file: pathlib.Path,
+                         progress_bar=None):
     """Download specified chunk of file
 
     Download [chunk_index*chunk_size : (chunk_index+1)*(chunk_size-1)] bytes
@@ -24,6 +32,9 @@ async def download_chunk(chunk_index: int, chunk_size: int, url: str, file: path
     url
         url of file to upload
     file : pathlib.Path
+        file to save uploaded data
+    progress_bar
+
     """
 
     start_byte = chunk_index * chunk_size  # first byte
@@ -31,7 +42,11 @@ async def download_chunk(chunk_index: int, chunk_size: int, url: str, file: path
     headers = {'Range': f'bytes={start_byte}-{end_byte}'}
     async with aiohttp.ClientSession(headers=headers) as session:
         async with session.get(url) as resp:
-            data = await resp.content.read()
+            data = b''
+            async for data_chunk, end_of_http_chunk in resp.content.iter_chunks():
+                data += data_chunk
+                if progress_bar is not None:
+                    progress_bar.update(len(data_chunk))
 
             # when chunk was uploaded open file and write to specific bytes
             async with aiofiles.open(file, mode='rb+') as f:
@@ -41,6 +56,8 @@ async def download_chunk(chunk_index: int, chunk_size: int, url: str, file: path
 
 async def schedule_download(url: str, file: pathlib.Path, num_chunks: int):
     """Schedule chunks to download"""
+
+    file.parent.mkdir(parents=True, exist_ok=True)
 
     # retrieve info about file size
     file.parent.mkdir(parents=True, exist_ok=True)
@@ -52,12 +69,17 @@ async def schedule_download(url: str, file: pathlib.Path, num_chunks: int):
         f.seek(file_size - 1)
         f.write(b'\0')
 
-    logging.info(f'Start download file: \'{file.name}\'...')
-    start_time = time.time()
-    await asyncio.gather(*(download_chunk(
-        chunk_index=chunk, chunk_size=ceil(file_size / num_chunks), url=url, file=file)
-                           for chunk in range(num_chunks)))
-    logging.info(f'Download is completed. Elapsed time: {(time.time() - start_time):.3f}')
+    with tqdm(total=file_size,
+              file=sys.stdout,
+              ncols=PROGRESSBAR_COLUMNS_NUM,
+              unit_scale=True,
+              unit_divisor=1024) as progress_bar:
+        await asyncio.gather(*(download_chunk(chunk_index=chunk,
+                                              chunk_size=ceil(file_size / num_chunks),
+                                              url=url,
+                                              file=file,
+                                              progress_bar=progress_bar)
+                               for chunk in range(num_chunks)))
 
 
 def download_file(url: str, file: pathlib.Path, num_chunks: int = 50):
@@ -72,5 +94,7 @@ def download_file(url: str, file: pathlib.Path, num_chunks: int = 50):
     num_chunks
     """
 
-    file.parent.mkdir(parents=True, exist_ok=True)
+    logging.info(f'Start download file: \'{file.name}\'...')
+    start_time = time.time()
     asyncio.run(schedule_download(url, file, num_chunks))
+    logging.info(f'Download is completed. Elapsed time: {(time.time() - start_time):.3f}')
