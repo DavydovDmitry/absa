@@ -42,7 +42,7 @@ def download_chunk(chunk_index: int,
 
 
 def download_file(url: str, file: pathlib.Path, num_chunks: int = multiprocessing.cpu_count()):
-    """Upload file in parallel by chunks
+    """Upload file in threads by chunks
 
     Parameters
     ----------
@@ -65,7 +65,7 @@ def download_file(url: str, file: pathlib.Path, num_chunks: int = multiprocessin
     start_time = time.time()
     logging.info(f'Start upload file: \'{file.name}\'')
     with multiprocessing.Pool(num_chunks) as pool:
-        pool.map(
+        results = pool.map(
             functools.partial(download_chunk,
                               url=url,
                               chunk_size=ceil(file_size / num_chunks),
