@@ -15,8 +15,3 @@ Execution
 
 Execute `train.py` to train classifiers.<br>
 Put your text file to input directory and run `process.py`.
-
-```bash
-python train.py
-python process.py
-```

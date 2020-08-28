@@ -1,18 +1,14 @@
-"""
-This module only for development purpose.
-To run full pipeline execute run_pipeline.py
-"""
-
-import logging
-from typing import List, Dict
-import os
 import copy
+import logging
+import os
+from typing import List, Dict
 
 from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
     parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, \
     SCORE_DECIMAL_LEN
-from absa.text.parsed.text import ParsedText
 from absa.utils.logging import configure_logging
+from absa.requisites import upload_requisites
+from absa.text.parsed.text import ParsedText
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
 from absa.utils.embedding import Embeddings
@@ -118,6 +114,9 @@ def opinion_polarity_classification(train_reviews: List[ParsedText],
 
 if __name__ == "__main__":
     configure_logging()
+    upload_requisites()
+
+    exit(0)
     vocabulary = Embeddings.vocabulary
     emb_matrix = Embeddings.embeddings_matrix
 
