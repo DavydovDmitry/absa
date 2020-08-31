@@ -22,7 +22,7 @@ from absa.models.score.f1 import Score
 
 
 class AspectClassifier:
-    """Target level aspect classifier
+    """Opinion level aspect classifier
 
     Attributes
     ----------
@@ -61,7 +61,7 @@ class AspectClassifier:
             }),
             num_epoch=50,
             verbose=False,
-            save_state=True) -> Union[np.array, Tuple[np.array, np.array]]:
+            save_state=False) -> Union[np.array, Tuple[np.array, np.array]]:
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, **optimizer_params)
@@ -248,23 +248,6 @@ class AspectClassifier:
 
         return opinions
 
-    def save_model(self):
-        """Save model state."""
-        th.save({
-            'vocabulary': self.vocabulary,
-            'model': self.model.state_dict()
-        }, opinion_aspect_classifier_dump_path)
-
-    @staticmethod
-    def load_model() -> 'AspectClassifier':
-        """Load pretrained model."""
-        checkpoint = th.load(opinion_aspect_classifier_dump_path)
-        model = checkpoint['model']
-        classifier = AspectClassifier(vocabulary=checkpoint['vocabulary'],
-                                      emb_matrix=model['nn.embed.weight'])
-        classifier.model.load_state_dict(model)
-        return classifier
-
     @staticmethod
     def score(texts: List[ParsedText], texts_pred: List[ParsedText]) -> Score:
         total_targets = 0
@@ -289,3 +272,30 @@ class AspectClassifier:
         recall = correct_predictions / total_predictions
         f1 = 2 * (precision * recall) / (precision + recall)
         return Score(precision=precision, recall=recall, f1=f1)
+
+    def fit_predict_score(self, train_reviews: List[ParsedText],
+                          test_reviews: List[ParsedText], test_reviews_pred: List[ParsedText],
+                          **kwargs) -> List[ParsedText]:
+        """Fit model, make predictions"""
+
+        self.fit(train_texts=train_reviews, val_texts=test_reviews, **kwargs)
+        test_reviews_pred = self.predict(test_reviews_pred)
+        logging.info(f'Score: {self.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
+        return test_reviews_pred
+
+    def save_model(self):
+        """Save model state."""
+        th.save({
+            'vocabulary': self.vocabulary,
+            'model': self.model.state_dict()
+        }, opinion_aspect_classifier_dump_path)
+
+    @staticmethod
+    def load_model() -> 'AspectClassifier':
+        """Load pretrained model."""
+        checkpoint = th.load(opinion_aspect_classifier_dump_path)
+        model = checkpoint['model']
+        classifier = AspectClassifier(vocabulary=checkpoint['vocabulary'],
+                                      emb_matrix=model['nn.embed.weight'])
+        classifier.model.load_state_dict(model)
+        return classifier

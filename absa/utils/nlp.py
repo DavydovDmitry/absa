@@ -3,7 +3,7 @@ import os
 import warnings
 import time
 
-import stanfordnlp
+import stanza
 
 
 class MetaNLPPipeline:
@@ -11,7 +11,7 @@ class MetaNLPPipeline:
         sys.stdout = open(os.devnull, 'w')
         while True:
             try:
-                self._nlp = stanfordnlp.Pipeline(lang='ru', )
+                self._nlp = stanza.Pipeline(lang='ru', )
             except RuntimeError:
                 time.sleep(1)
             else:

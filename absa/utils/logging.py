@@ -12,7 +12,7 @@ def configure_logging(level=logging.INFO):
     """
 
     log_path.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(level=level)
+
     log_formatter = logging.Formatter(
         "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
     log_formatter.formatTime = lambda record, datefmt: datetime.datetime.now().strftime(
@@ -21,4 +21,6 @@ def configure_logging(level=logging.INFO):
     file_handler = logging.FileHandler(
         filename=f'{log_path}/{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.log')
     file_handler.setFormatter(log_formatter)
-    logging.getLogger().addHandler(file_handler)
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    logger.addHandler(file_handler)

@@ -1,6 +1,8 @@
-from typing import List, Dict, Union, Tuple
 import copy
+import logging
+import pathlib
 import sys
+from typing import List, Dict, Union, Tuple
 
 import torch as th
 import numpy as np
@@ -49,7 +51,7 @@ class AspectClassifier(BaseEstimator):
         self.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
     def _load_model(self, vocabulary: Dict[str, int], aspect_labels: Labels,
-                    threshold: np.array, embeddings: th.Tensor) -> None:
+                    threshold: np.array, embeddings: th.Tensor):
         """Set classifier parameters
 
         Parameters
@@ -90,7 +92,7 @@ class AspectClassifier(BaseEstimator):
         val_texts: List[ParsedText] = None,
         start_threshold: np.array = None,
         fixed_threshold: bool = False,
-        save_state: bool = True,
+        save_state: bool = False,
         verbose: Union[VERBOSITY_ON, VERBOSITY_PROGRESS, VERBOSITY_OFF] = VERBOSITY_PROGRESS
     ) -> Union[np.array, Tuple[np.array, np.array]]:
         """Fit and save model state.
@@ -294,7 +296,7 @@ class AspectClassifier(BaseEstimator):
         f1 = 2 * (precision * recall) / (precision + recall)
         return f1
 
-    def metrics(self, texts: List[ParsedText]) -> Score:
+    def get_metrics(self, texts: List[ParsedText], texts_pred: List[ParsedText]) -> Score:
         """Make predictions and return metrics
 
         Parameters
@@ -305,8 +307,6 @@ class AspectClassifier(BaseEstimator):
         -------
         score : Score
         """
-
-        texts_pred = self.predict(texts)
 
         total_labels = 0
         total_predictions = 0
@@ -343,9 +343,25 @@ class AspectClassifier(BaseEstimator):
         f1_score : float
             macro f1 metric
         """
-        return self.metrics(X).f1
+        X_pred = self.predict(X)
+        return self.get_metrics(X, X_pred).f1
 
-    def save_model(self, pathway=sentence_aspect_classifier_dump_path) -> None:
+    def fit_predict_score(self, vocabulary, emb_matrix, train_reviews: List[ParsedText],
+                          test_reviews: List[ParsedText], **kwargs) -> List[ParsedText]:
+        """Fit model, return predictions, log score"""
+
+        self.fit(train_texts=train_reviews,
+                 vocabulary=vocabulary,
+                 embeddings=emb_matrix,
+                 **kwargs)
+        test_reviews_pred = copy.deepcopy(test_reviews)
+        for review in test_reviews_pred:
+            review.reset_opinions()
+        test_reviews_pred = self.predict(test_reviews_pred)
+        logging.info(f'F1: {self.get_metrics(test_reviews, test_reviews_pred).f1}')
+        return test_reviews_pred
+
+    def save_model(self, pathway: pathlib.Path = sentence_aspect_classifier_dump_path) -> None:
         """Save model state
 
         Model state:
@@ -357,6 +373,7 @@ class AspectClassifier(BaseEstimator):
         pathway
             pathway where classifier will be saved
         """
+        pathway.parent.mkdir(parents=True, exist_ok=True)
         th.save(
             {
                 'params': self.get_params(),

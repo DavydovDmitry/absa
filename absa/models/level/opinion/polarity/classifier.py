@@ -71,7 +71,7 @@ class PolarityClassifier:
             }),
             num_epoch=30,
             verbose=True,
-            save_state=True):
+            save_state=False):
         """Fit on train sentences and save model state."""
         parameters = [p for p in self.model.parameters() if p.requires_grad]
         optimizer = optimizer_class(parameters, **optimizer_params)
@@ -187,6 +187,22 @@ class PolarityClassifier:
                 texts[text_index].sentences[sentence_index].opinions[
                     opinion_index].set_polarity(item)
         return texts
+
+    def fit_predict_score(self, train_reviews: List[ParsedText],
+                          test_reviews: List[ParsedText], **kwargs) -> List[ParsedText]:
+        """Fit model, return predictions, log score"""
+
+        self.fit(train_texts=train_reviews, val_texts=test_reviews, num_epoch=20, **kwargs)
+        test_reviews_pred = copy.deepcopy(test_reviews)
+        for review in test_reviews_pred:
+            for sentence in review.sentences:
+                sentence.reset_opinions_polarities()
+
+        test_reviews_pred = self.predict(test_reviews_pred)
+        logging.info(
+            f'Accuracy: {self.score(texts=test_reviews, texts_pred=test_reviews_pred):{SCORE_DECIMAL_LEN}f}'
+        )
+        return test_reviews_pred
 
     def save_model(self):
         """Save model state."""

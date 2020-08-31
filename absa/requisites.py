@@ -42,13 +42,13 @@ def _download_train_dataset():
 
 
 def _download_ru_stanfordnlp_model():
-    import stanfordnlp
+    import stanza
 
     if not pathlib.Path.home().joinpath(
-            'stanfordnlp_resources/ru_syntagrus_models/ru_syntagrus_tokenizer.pt').exists():
-        stanfordnlp.download('ru')
+            'stanza_resources/resources.json').exists():
+        stanza.download('ru')
     else:
-        logging.warning(f'ru language model already exist.')
+        logging.warning(f'ru language model already exist. Skip download.')
 
 
 def upload_requisites():

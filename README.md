@@ -1,4 +1,6 @@
-# Essential stages
+# ABSA
+This pipeline for aspect-based sentiment analysis of texts.
+It's essential stages:
 ![](notebooks/images/pipeline.svg)
 
 # Setup
@@ -12,6 +14,7 @@
 ----------
 Execution
 ----------
-
-Execute `train.py` to train classifiers.<br>
-Put your text file to input directory and run `process.py`.
+```shell script
+python train.py # to train classifiers
+python example  # to process text in example directory
+```

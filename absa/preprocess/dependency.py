@@ -4,7 +4,7 @@ import logging
 import sys
 
 import networkx as nx
-import stanfordnlp
+import stanza
 from tqdm import tqdm
 
 from absa import PROGRESSBAR_COLUMNS_NUM
@@ -16,7 +16,7 @@ from absa.text.parsed.text import ParsedText
 WORD_REG = re.compile(r'(?:\w+-\w+)|(?:\w+)')
 
 
-def dep_parse_reviews(texts: List[Text], nlp: stanfordnlp.Pipeline) -> List[ParsedText]:
+def dep_parse_reviews(texts: List[Text], nlp: stanza.Pipeline) -> List[ParsedText]:
     """Get another representation of reviews.
 
     Parse reviews sentences to build dependency trees.
@@ -36,9 +36,9 @@ def dep_parse_reviews(texts: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pars
 
     Parameters
     ----------
-    texts: list[Text]
+    texts : List[Text]
         list of raw texts
-    nlp: stanfordnlp.Pipeline
+    nlp : stanza.Pipeline
         pipeline for text processing
 
     Returns
@@ -63,7 +63,7 @@ def dep_parse_reviews(texts: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pars
                     id2dep = dict()
                     graph = nx.classes.DiGraph()
                     for token in doc.tokens:
-                        token_index = int(token.index)
+                        token_index = int(token.id[0])
                         word = token.words[0]
                         start_index = text.get_text().find(word.text, stop_index)
                         stop_index = start_index + len(word.text)
@@ -75,13 +75,13 @@ def dep_parse_reviews(texts: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pars
                             continue
                         graph.add_node(token_index)
                         id2lemma[token_index] = word.lemma + '_' + word.upos
-                        id2dep[token_index] = word.dependency_relation
+                        id2dep[token_index] = word.deprel
 
                     # Create dependency graph
                     for token in doc.tokens:
                         word = token.words[0]
-                        token_index = int(token.index)
-                        governor = word.governor
+                        token_index = int(token.id[0])
+                        governor = word.head
                         if (token_index in graph) and (governor in graph):
                             graph.add_edge(token_index, governor)
 
@@ -119,5 +119,5 @@ def dep_parse_reviews(texts: List[Text], nlp: stanfordnlp.Pipeline) -> List[Pars
                     prev_sentences_len += len(parsed_sentence.text)
             parsed_texts.append(ParsedText(sentences=parsed_sentences))
             progress_bar.update(1)
-    logging.info('Dependency parsing is complete.')
+    logging.info('\nDependency parsing is completed.')
     return parsed_texts

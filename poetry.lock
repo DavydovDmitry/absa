@@ -1089,17 +1089,17 @@ test = ["mock", "moto", "pathlib2", "responses", "boto3", "google-compute-engine
 
 [[package]]
 category = "main"
-description = "Official Stanford NLP Python Library"
-name = "stanfordnlp"
+description = "A Python NLP Library for Many Human Languages, by the Stanford NLP Group"
+name = "stanza"
 optional = false
-python-versions = "*"
-version = "0.2.0"
+python-versions = ">=3.6"
+version = "1.1.1"
 
 [package.dependencies]
 numpy = "*"
 protobuf = "*"
 requests = "*"
-torch = ">=1.0.0"
+torch = ">=1.3.0"
 tqdm = "*"
 
 [package.extras]
@@ -1294,7 +1294,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "fa5a6ed83fd8489360fa19fb5c4c8e20372599a62de1295f5d75eb2c5769866e"
+content-hash = "365e0a247bea99289a42dbbfa71004fe1ba93cf7b6e56d8978efd0569ccf3589"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1986,9 +1986,9 @@ sklearn = [
 smart-open = [
     {file = "smart_open-2.1.1.tar.gz", hash = "sha256:51b05acd85ec007e1d4dcdbf2bbf917218a45026f37d559559401114bb5e5840"},
 ]
-stanfordnlp = [
-    {file = "stanfordnlp-0.2.0-py3-none-any.whl", hash = "sha256:66450f0b422e649e8b31f171260930b733324b000ebfe81c436328b424425902"},
-    {file = "stanfordnlp-0.2.0.tar.gz", hash = "sha256:a8bd56dfef23cbb1e1c461469ac5bdd4563c24f360befe300a7d97cb51b49a49"},
+stanza = [
+    {file = "stanza-1.1.1-py3-none-any.whl", hash = "sha256:281e9f47623790e2770cf42f837346724c45a16a767302ec538287c54767eed7"},
+    {file = "stanza-1.1.1.tar.gz", hash = "sha256:df8d683e371e06d9a6b9a67be1afa20e0e6328927e7dfd0cc77010eab35bf663"},
 ]
 termcolor = [
     {file = "termcolor-1.1.0.tar.gz", hash = "sha256:1d6d69ce66211143803fbc56652b41d73b4a400a2891d7bf7a1cdf4c02de613b"},

@@ -1,5 +1,3 @@
-"""Specify constants, pathways, dumps"""
-
 import os
 import pathlib
 
@@ -12,12 +10,11 @@ UNKNOWN_WORD = '<unk>'  # index of word that not found in vocabulary
 PAD_WORD = '<pad>'  # index of that word will be using to pad sentence to maximal length in batch
 
 # ------------------------------- Pathways ------------------------------------
-# todo: fix
 project_path = pathlib.Path(__file__).resolve().parent
 
-io_path = os.path.join(project_path, 'io')
-input_path = os.path.join(io_path, 'input')
-output_path = os.path.join(io_path, 'output')
+example_path = os.path.join(project_path, 'example')
+input_path = os.path.join(example_path, 'input')
+output_path = os.path.join(example_path, 'output')
 
 images_path = os.path.join(project_path, 'analysis', 'images')
 
@@ -25,10 +22,6 @@ images_path = os.path.join(project_path, 'analysis', 'images')
 static_files_path = pathlib.Path.home().joinpath('.absa')
 
 competition_path = static_files_path.joinpath('datasets/SemEval2016')
-
-TEST_APPENDIX = '.test'  # suffix for test dumps
-train_reviews_path = competition_path.joinpath('train.xml')
-test_reviews_path = competition_path.joinpath('test.xml')
 
 pretrained_embeddings_url = 'http://vectors.nlpl.eu/repository/20/185.zip'
 embeddings_dir = static_files_path.joinpath('embeddings')

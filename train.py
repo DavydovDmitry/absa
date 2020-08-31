@@ -1,134 +1,35 @@
-import copy
-import logging
-import os
-from typing import List, Dict
-
-from absa import TEST_APPENDIX, train_reviews_path, test_reviews_path, \
-    parsed_reviews_dump_path, checked_reviews_dump_path, raw_reviews_dump_path, \
-    SCORE_DECIMAL_LEN
+from absa import competition_path
 from absa.utils.logging import configure_logging
 from absa.requisites import upload_requisites
-from absa.text.parsed.text import ParsedText
-from absa.utils.nlp import NLPPipeline
-from absa.utils.dump import make_dump, load_dump
 from absa.utils.embedding import Embeddings
-from absa.io.input.semeval2016 import from_xml
-from absa.preprocess.spell_check import spell_check
-from absa.preprocess.dependency import dep_parse_reviews
+from absa.preprocess.pipeline import preprocess_file
 from absa.models.level.sentence.aspect.classifier import AspectClassifier as SentenceAspectClassifier
 from absa.models.level.opinion.aspect.classifier import AspectClassifier as OpinionAspectClassifier
-from absa.models.level.opinion.polarity.classifier import PolarityClassifier
-
-SEED = 42
-
-
-def preprocess_pipeline(vocabulary: Dict = None,
-                        is_train: bool = True,
-                        skip_spell_check: bool = True,
-                        make_dumps: bool = True) -> List[ParsedText]:
-
-    # Set postfix for train/test data
-    if is_train:
-        appendix = ''
-        reviews_path = train_reviews_path
-    else:
-        appendix = TEST_APPENDIX
-        reviews_path = test_reviews_path
-
-    # Parse reviews
-    if os.path.isfile(raw_reviews_dump_path + appendix):
-        reviews = load_dump(pathway=raw_reviews_dump_path + appendix)
-    else:
-        if vocabulary is None:
-            raise ValueError(
-                "There's no dump. Need to parse review. Therefore vocabulary parameter is required."
-            )
-        reviews = from_xml(pathway=reviews_path)
-        if make_dumps:
-            make_dump(obj=reviews, pathway=raw_reviews_dump_path + appendix)
-
-    # Spellcheck
-    if not skip_spell_check:
-        if os.path.isfile(checked_reviews_dump_path + appendix):
-            reviews = load_dump(pathway=checked_reviews_dump_path + appendix)
-        else:
-            reviews = spell_check(reviews)
-            if make_dumps:
-                make_dump(obj=reviews, pathway=checked_reviews_dump_path + appendix)
-
-    # Dependency parsing
-    if os.path.isfile(parsed_reviews_dump_path + appendix):
-        parsed_reviews = load_dump(pathway=parsed_reviews_dump_path + appendix)
-    else:
-        nlp = NLPPipeline.nlp
-        parsed_reviews = dep_parse_reviews(reviews, nlp)
-        if make_dumps:
-            make_dump(obj=parsed_reviews, pathway=parsed_reviews_dump_path + appendix)
-
-    return parsed_reviews
-
-
-def sentence_aspect_classification(train_reviews: List[ParsedText],
-                                   test_reviews: List[ParsedText]) -> List[ParsedText]:
-    classifier = SentenceAspectClassifier()
-    classifier.fit(train_texts=train_reviews, vocabulary=vocabulary, embeddings=emb_matrix)
-
-    test_reviews_pred = copy.deepcopy(test_reviews)
-    for review in test_reviews_pred:
-        review.reset_opinions()
-
-    test_reviews_pred = classifier.predict(test_reviews_pred)
-    logging.info(
-        f'Score: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
-    return test_reviews_pred
-
-
-def opinion_aspect_classification(train_reviews: List[ParsedText],
-                                  test_reviews: List[ParsedText],
-                                  test_reviews_pred: List[ParsedText]) -> List[ParsedText]:
-    classifier = OpinionAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-    classifier.fit(train_texts=train_reviews, val_texts=test_reviews)
-
-    test_reviews_pred = classifier.predict(test_reviews_pred)
-    logging.info(
-        f'Score: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred)}')
-    return test_reviews_pred
-
-
-def opinion_polarity_classification(train_reviews: List[ParsedText],
-                                    test_reviews: List[ParsedText]) -> List[ParsedText]:
-    classifier = PolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix)
-    classifier.fit(train_texts=train_reviews, val_texts=test_reviews, num_epoch=20)
-
-    test_reviews_pred = copy.deepcopy(test_reviews)
-    for review in test_reviews_pred:
-        for sentence in review.sentences:
-            sentence.reset_opinions_polarities()
-
-    test_reviews_pred = classifier.predict(test_reviews_pred)
-    logging.info(
-        f'Accuracy: {classifier.score(texts=test_reviews, texts_pred=test_reviews_pred):{SCORE_DECIMAL_LEN}f}'
-    )
-    return test_reviews_pred
-
+from absa.models.level.opinion.polarity.classifier import PolarityClassifier as OpinionPolarityClassifier
 
 if __name__ == "__main__":
     configure_logging()
     upload_requisites()
 
-    exit(0)
+    train_reviews = preprocess_file(pathway=competition_path.joinpath('train.xml'),
+                                    using_dump=True)
+    test_reviews = preprocess_file(pathway=competition_path.joinpath('test.xml'),
+                                   using_dump=True)
+
     vocabulary = Embeddings.vocabulary
     emb_matrix = Embeddings.embeddings_matrix
 
-    preprocess_pipeline(vocabulary=vocabulary, is_train=True, skip_spell_check=False)
-    preprocess_pipeline(vocabulary=vocabulary, is_train=False, skip_spell_check=False)
+    test_reviews_pred = SentenceAspectClassifier().fit_predict_score(
+        vocabulary=vocabulary,
+        emb_matrix=emb_matrix,
+        train_reviews=train_reviews,
+        test_reviews=test_reviews,
+        save_state=True)
 
-    train_reviews = load_dump(pathway=parsed_reviews_dump_path)
-    test_reviews = load_dump(pathway=parsed_reviews_dump_path + TEST_APPENDIX)
-
-    test_reviews_pred = sentence_aspect_classification(train_reviews=train_reviews,
-                                                       test_reviews=test_reviews)
-    opinion_aspect_classification(train_reviews=train_reviews,
-                                  test_reviews=test_reviews,
-                                  test_reviews_pred=test_reviews_pred)
-    opinion_polarity_classification(train_reviews=train_reviews, test_reviews=test_reviews)
+    OpinionAspectClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix).fit_predict_score(
+        train_reviews=train_reviews,
+        test_reviews=test_reviews,
+        test_reviews_pred=test_reviews_pred,
+        save_state=True)
+    OpinionPolarityClassifier(vocabulary=vocabulary, emb_matrix=emb_matrix).fit_predict_score(
+        train_reviews=train_reviews, test_reviews=test_reviews, save_state=True)
