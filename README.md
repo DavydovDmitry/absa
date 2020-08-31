@@ -1,6 +1,7 @@
 # ABSA
-This pipeline for aspect-based sentiment analysis of texts.
+This is pipeline for aspect-based sentiment analysis of texts.
 It's essential stages:
+
 ![](notebooks/images/pipeline.svg)
 
 # Setup
