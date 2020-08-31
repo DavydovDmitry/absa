@@ -3,7 +3,7 @@ import os
 from absa.utils.embedding import Embeddings
 from absa.utils.nlp import NLPPipeline
 from absa.utils.dump import make_dump, load_dump
-from absa.input.semeval2016 import from_xml
+from absa.io.input.semeval2016 import from_xml
 from absa.preprocess.dependency import dep_parse_reviews
 from . import SemEval2016_filename, test_dumps_path, RAW_POSTFIX, DEP_POSTFIX, SemEval2016_pathway
 

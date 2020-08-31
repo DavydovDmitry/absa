@@ -12,8 +12,9 @@ datasets
 **/dumps/
 **/logs/
 
-input/
-!input/README.rst
-!input/raw.txt
-output/
-!output/README.rst
+example/input/
+!example/input/README.rst
+!example/input/raw.txt
+
+example/output/
+!example/output/README.rst
