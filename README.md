@@ -16,6 +16,6 @@ It's essential stages:
 Execution
 ----------
 ```shell script
-python train.py # to train classifiers
+python train.py    # to train classifiers
 python example.py  # to process text in example directory
 ```
