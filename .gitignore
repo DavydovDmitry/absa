@@ -11,10 +11,3 @@ embeddings/*
 datasets
 **/dumps/
 **/logs/
-
-example/input/
-!example/input/README.rst
-!example/input/raw.txt
-
-example/output/
-!example/output/README.rst
