@@ -1,6 +1,11 @@
 # ABSA
-This is pipeline for aspect-based sentiment analysis of texts.
-It's essential stages:
+This is pipeline for Aspect-Based Sentiment Analysis of texts.
+Primary tasks:
+- extract aspect terms;
+- classify aspect terms on aspect categories;
+- classify aspect terms on polarity.
+
+### Essential processing stages:
 
 ![](notebooks/images/pipeline.svg)
 
