@@ -11,8 +11,6 @@ Primary tasks:
 
 # Setup
 
-**1) Requirements**
-
 - [Python](https://www.python.org/downloads/) >= 3.7
 - [Poetry](https://python-poetry.org/docs/) >= 0.12
 - [PyTorch](https://pytorch.org/get-started/locally/) >= 1.5
